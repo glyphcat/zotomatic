@@ -26,6 +26,8 @@ var/
 env/
 venv/
 ENV/
+
+# dev environments
 .python-version
 
 # Unit test / coverage reports
