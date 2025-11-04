@@ -7,7 +7,13 @@ authors = [
     { name = "glyphcat", email = "glyphcat13@gmail.com" }
 ]
 requires-python = ">=3.9"
-dependencies = []
+dependencies = [
+    "httpx>=0.28.1",
+    "pdfminer.six>=20240706",
+    "pymupdf>=1.26.4",
+    "pyzotero>=1.6.16",
+    "watchfiles>=1.1.0",
+]
 
 [project.scripts]
 zotomatic = "zotomatic.cli:main"
