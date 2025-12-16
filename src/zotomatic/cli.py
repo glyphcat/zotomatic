@@ -6,7 +6,25 @@ import argparse
 from collections.abc import Sequence
 from typing import Any
 
+from zotomatic import pipelines
+
 from . import api
+
+# TODO: verbose対応,dry-run対応
+"""
+cli.py で --verbose をパース → get_logger(verbose=args.verbose)
+
+そのロガーを api.py や各モジュールに渡す
+
+例外は errors.py のクラスで揃えて投げる
+
+try:
+    api.run_ready(config, logger=logger)
+except ZotomaticError as e:
+    logger.error(f"fatal: {e}")
+    sys.exit(1)
+
+"""
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -20,7 +38,9 @@ def _build_parser() -> argparse.ArgumentParser:
         "--config-path", dest="config_path", help="Override path to config file"
     )
     shared.add_argument(
-        "--output-dir", dest="output_dir", help="Directory for generated artifacts"
+        "--output-dir",
+        dest="notes_output_dir",
+        help="Directory for generated artifacts",
     )
 
     ready = subparsers.add_parser(
@@ -54,11 +74,12 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser = _build_parser()
     args = parser.parse_args(list(argv) if argv is not None else None)
 
+    # Run pipelines.
     handlers: dict[str, Any] = {
-        "ready": api.run_ready,
-        "backfill": api.run_backfill,
-        "doctor": api.run_doctor,
-        "init": api.run_init,
+        "ready": pipelines.run_ready,
+        "backfill": pipelines.stub_run_backfill,
+        "doctor": pipelines.stub_run_doctor,
+        "init": pipelines.run_init,
     }
 
     command = args.command

@@ -1,0 +1,46 @@
+"""Utilities to enrich Zotero metadata using PDF-derived information."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+from zotomatic.utils import pdf
+from zotomatic.zotero.types import ZoteroPaper
+
+
+def enrich_paper_metadata(paper: ZoteroPaper) -> ZoteroPaper:
+    """Return the ZoteroPaper with missing fields filled when possible."""
+
+    pdf_path = Path(paper.filePath) if paper.filePath else None
+    if not pdf_path:
+        return paper
+
+    # TODO: 不要な補完処理、抽出処理が実行されないように修正
+    # TODO: plain_textの全文抽出が必要か微妙なためリファクタ検討
+
+    try:
+        plain_text = pdf.extract_plain_text(pdf_path)
+        abstract_candidate = pdf.extract_abstract_candidate(pdf_path)
+    except Exception:  # pragma: no cover - corrupted or unsupported PDF
+        return paper
+
+    updates: dict[str, object] = {}
+
+    # NOTE: ZoteroメタデータよりabstractNoteが取得できなかった場合、独自に要約を探索し保管する処理
+    if not paper.abstractNote and abstract_candidate:
+        updates["abstractNote"] = abstract_candidate
+
+    if not paper.year:
+        year = pdf.extract_year_candidate_from_text(plain_text)
+        if year:
+            updates["year"] = year
+
+    if not paper.authors:
+        authors = pdf.extract_authors_candidate_from_text(plain_text)
+        if authors:
+            updates["authors"] = authors
+
+    if not paper.title and pdf_path.stem:
+        updates["title"] = pdf_path.stem
+
+    return paper.update(**updates) if updates else paper
