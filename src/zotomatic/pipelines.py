@@ -1,8 +1,5 @@
 """pipelines"""
 
-# それぞれのコマンドのスタブ
-# サービス（ユースケース）とapiをかねていてOK
-
 import time
 from collections.abc import Mapping
 from datetime import datetime, timezone
