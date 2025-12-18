@@ -21,8 +21,7 @@ from zotomatic.logging import get_logger
 from zotomatic.note import NoteBuilder, NoteBuilderConfig, NoteBuilderContext
 from zotomatic.repositories import NoteRepository, PDFRepository
 from zotomatic.watcher import PDFStorageWatcher, WatcherConfig
-from zotomatic.zotero import ZoteroClient
-from zotomatic.zotero.types import ZoteroClientConfig
+from zotomatic.zotero import ZoteroClient, ZoteroClientConfig
 
 
 def _merge_config(cli_options: Mapping[str, Any] | None) -> dict[str, Any]:
