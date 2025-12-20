@@ -1,5 +1,7 @@
 """リポジトリデータクラス"""
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
@@ -19,7 +21,7 @@ class NoteRepositoryConfig:
         object.__setattr__(self, "root_dir", Path(self.root_dir).expanduser())
 
     @classmethod
-    def from_settings(cls, settings: Mapping[str, Any]) -> "NoteRepositoryConfig":
+    def from_settings(cls, settings: Mapping[str, Any]) -> NoteRepositoryConfig:
         note_dir = settings.get("notes_output_dir")
         if not note_dir:
             raise MissingSettingError("notes_output_dir")
@@ -39,10 +41,32 @@ class PDFRepositoryConfig:
         object.__setattr__(self, "library_dir", Path(self.library_dir).expanduser())
 
     @classmethod
-    def from_settings(cls, settings: Mapping[str, Any]) -> "PDFRepositoryConfig":
+    def from_settings(cls, settings: Mapping[str, Any]) -> PDFRepositoryConfig:
         pdf_dir = settings.get("pdf_library_dir")
         if not pdf_dir:
             raise MissingSettingError("pdf_library_dir")
         recursive = bool(settings.get("pdf_scan_recursive", True))
         pattern = str(settings.get("pdf_glob_pattern", "*.pdf"))
         return cls(library_dir=Path(pdf_dir), recursive=recursive, pattern=pattern)
+
+
+@dataclass(frozen=True, slots=True)
+class WatcherStateRepositoryConfig:
+    """
+    PDFストレージ監視状態の読み書きに必要な設定値を束ねる。
+    バックエンドは今の所SQLiteを想定。
+    """
+
+    sqlite_path: Path
+
+    def __post_init__(self) -> None:  # type: ignore[override]
+        object.__setattr__(self, "sqlite_path", Path(self.sqlite_path).expanduser())
+
+    @classmethod
+    def from_settings(cls, settings: Mapping[str, Any]) -> WatcherStateRepositoryConfig:
+        sqlite_path = settings.get("sqlite_path")
+        if not sqlite_path:
+            raise MissingSettingError("sqlite_path")
+        recursive = bool(settings.get("pdf_scan_recursive", True))
+        pattern = str(settings.get("pdf_glob_pattern", "*.pdf"))
+        return cls(sqlite_path=Path(sqlite_path))
