@@ -67,6 +67,21 @@ class WatcherStateRepositoryConfig:
         sqlite_path = settings.get("sqlite_path")
         if not sqlite_path:
             raise MissingSettingError("sqlite_path")
+        # TODO: TBD
         recursive = bool(settings.get("pdf_scan_recursive", True))
         pattern = str(settings.get("pdf_glob_pattern", "*.pdf"))
         return cls(sqlite_path=Path(sqlite_path))
+
+
+@dataclass(frozen=True, slots=True)
+class WatcherFileState:
+    """SQLiteに保存するPDFファイルの監視状態。"""
+
+    path: Path
+    mtime_ns: int
+    size: int
+    last_seen_at: int
+    sha1: str | None = None
+
+    def __post_init__(self) -> None:  # type: ignore[override]
+        object.__setattr__(self, "path", Path(self.path).expanduser())

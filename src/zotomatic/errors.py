@@ -41,6 +41,10 @@ class PDFRepositoryError(RepositoryError):
     """Raised when PDF repository cannot complete an operation."""
 
 
+class WatcherStateRepositoryError(RepositoryError):
+    """Raised when watcher state repository cannot complete an operation."""
+
+
 class LLMClientError(RuntimeError):
     """Base error for LLM client failures."""
 
