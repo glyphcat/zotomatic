@@ -19,7 +19,7 @@ This directory stores the SQLite schema and migrations used by Zotomatic.
 - `pending`
   - Retry queue for PDFs not yet resolved by Zotero.
   - Columns: `file_path`, `first_seen_at`, `last_attempt_at`, `next_attempt_at`, `attempt_count`, `last_error`.
-- `directory_stamp`
+- `directory_state`
   - Directory-level cache to skip unchanged paths during polling.
   - Columns: `dir_path`, `aggregated_mtime_ns`, `last_seen_at`.
 
@@ -28,7 +28,7 @@ This directory stores the SQLite schema and migrations used by Zotomatic.
 - On file detection, upsert into `files` with `last_seen_at`.
 - If Zotero resolves an attachment, upsert into `zotero_attachment` and remove from `pending`.
 - If Zotero does not resolve, insert/update `pending` with backoff fields.
-- During polling fallback, use `directory_stamp` to skip unmodified directories.
+- During polling fallback, use `directory_state` to skip unmodified directories.
 
 ## Indexes
 

@@ -32,7 +32,7 @@ erDiagram
         TEXT last_error
     }
 
-    DIRECTORY_STAMP {
+    DIRECTORY_STATE {
         TEXT dir_path PK
         INTEGER aggregated_mtime_ns
         INTEGER last_seen_at

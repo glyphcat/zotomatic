@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS pending (
 CREATE INDEX IF NOT EXISTS pending_next_attempt_idx
     ON pending(next_attempt_at);
 
-CREATE TABLE IF NOT EXISTS directory_stamp (
+CREATE TABLE IF NOT EXISTS directory_state (
     dir_path TEXT PRIMARY KEY,
     aggregated_mtime_ns INTEGER NOT NULL,
     last_seen_at INTEGER NOT NULL
