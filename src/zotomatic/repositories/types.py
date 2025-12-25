@@ -77,11 +77,11 @@ class WatcherStateRepositoryConfig:
 class WatcherFileState:
     """SQLiteに保存するPDFファイルの監視状態。"""
 
-    path: Path
+    file_path: Path
     mtime_ns: int
     size: int
     last_seen_at: int
     sha1: str | None = None
 
     def __post_init__(self) -> None:  # type: ignore[override]
-        object.__setattr__(self, "path", Path(self.path).expanduser())
+        object.__setattr__(self, "file_path", Path(self.file_path).expanduser())

@@ -38,16 +38,16 @@ class WatcherStateRepository:
         """ファイル状態をSQLiteへ書き込む（存在すれば更新）。"""
 
         query = """
-            INSERT INTO files (path, mtime_ns, size, sha1, last_seen_at)
+            INSERT INTO files (file_path, mtime_ns, size, sha1, last_seen_at)
             VALUES (?, ?, ?, ?, ?)
-            ON CONFLICT(path) DO UPDATE SET
+            ON CONFLICT(file_path) DO UPDATE SET
                 mtime_ns=excluded.mtime_ns,
                 size=excluded.size,
                 sha1=excluded.sha1,
                 last_seen_at=excluded.last_seen_at
         """
         params = (
-            str(state.path),
+            str(state.file_path),
             state.mtime_ns,
             state.size,
             state.sha1,
@@ -61,16 +61,16 @@ class WatcherStateRepository:
 
         resolved = Path(path).expanduser()
         query = """
-            SELECT path, mtime_ns, size, sha1, last_seen_at
+            SELECT file_path, mtime_ns, size, sha1, last_seen_at
             FROM files
-            WHERE path = ?
+            WHERE file_path = ?
         """
         with self._connect() as conn:
             row = conn.execute(query, (str(resolved),)).fetchone()
         if row is None:
             return None
         return WatcherFileState(
-            path=Path(row["path"]),
+            file_path=Path(row["file_path"]),
             mtime_ns=row["mtime_ns"],
             size=row["size"],
             sha1=row["sha1"],
@@ -126,12 +126,12 @@ class WatcherStateRepository:
 
 
 def build_file_state(
-    path: Path, mtime_ns: int, size: int, sha1: str | None = None
+    file_path: Path, mtime_ns: int, size: int, sha1: str | None = None
 ) -> WatcherFileState:
     """現在時刻を last_seen_at に入れてファイル状態を構築する補助関数。"""
 
     return WatcherFileState(
-        path=path,
+        file_path=file_path,
         mtime_ns=mtime_ns,
         size=size,
         sha1=sha1,
