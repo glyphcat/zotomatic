@@ -8,7 +8,7 @@ from .types import (
     WatcherFileState,
     WatcherStateRepositoryConfig,
 )
-from .watcher_state_repository import WatcherStateRepository, build_file_state
+from .watcher_state_repository import WatcherStateRepository
 
 __all__ = [
     "NoteRepository",
@@ -18,5 +18,4 @@ __all__ = [
     "WatcherStateRepository",
     "WatcherStateRepositoryConfig",
     "WatcherFileState",
-    "build_file_state",
 ]

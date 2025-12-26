@@ -7,7 +7,6 @@ PDFストレージの探索情報ログRepository
 from __future__ import annotations
 
 import sqlite3
-import time
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -124,16 +123,3 @@ class WatcherStateRepository:
         finally:
             conn.close()
 
-
-def build_file_state(
-    file_path: Path, mtime_ns: int, size: int, sha1: str | None = None
-) -> WatcherFileState:
-    """現在時刻を last_seen_at に入れてファイル状態を構築する補助関数。"""
-
-    return WatcherFileState(
-        file_path=file_path,
-        mtime_ns=mtime_ns,
-        size=size,
-        sha1=sha1,
-        last_seen_at=int(time.time()),
-    )

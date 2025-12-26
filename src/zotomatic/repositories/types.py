@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
@@ -83,3 +84,15 @@ class WatcherFileState:
 
     def __post_init__(self) -> None:  # type: ignore[override]
         object.__setattr__(self, "file_path", Path(self.file_path).expanduser())
+
+    @classmethod
+    def from_path(
+        cls, file_path: Path, mtime_ns: int, size: int, sha1: str | None = None
+    ) -> WatcherFileState:
+        return cls(
+            file_path=file_path,
+            mtime_ns=mtime_ns,
+            size=size,
+            sha1=sha1,
+            last_seen_at=int(time.time()),
+        )
