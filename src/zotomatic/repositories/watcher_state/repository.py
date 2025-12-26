@@ -58,6 +58,10 @@ class WatcherStateRepository(ABC):
     @abstractmethod
     def zotero_attachment(self) -> ZoteroAttachmentStore: ...
 
+    @classmethod
+    def from_settings(cls, settings: Mapping[str, object]) -> "WatcherStateRepository":
+        return create_watcher_state_repository(settings)
+
 
 def create_watcher_state_repository(
     settings: Mapping[str, object],

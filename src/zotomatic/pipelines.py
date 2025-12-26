@@ -16,11 +16,8 @@ from zotomatic.llm import (
 )
 from zotomatic.logging import get_logger
 from zotomatic.note import NoteBuilder, NoteBuilderConfig, NoteBuilderContext
-from zotomatic.repositories import (
-    NoteRepository,
-    PDFRepository,
-    create_watcher_state_repository,
-)
+from zotomatic.repositories import NoteRepository, PDFRepository
+from zotomatic.repositories.watcher_state import WatcherStateRepository
 from zotomatic.services import PendingQueueService
 from zotomatic.watcher import PDFStorageWatcher, WatcherConfig
 from zotomatic.zotero import ZoteroClient, ZoteroClientConfig
@@ -155,8 +152,10 @@ def run_ready(cli_options: Mapping[str, Any] | None = None):
     # repositoryの準備
     note_repository = NoteRepository.from_settings(settings)
     pdf_repository = PDFRepository.from_settings(settings)
-    state_repository = create_watcher_state_repository(settings)
-    pending_queue_service = PendingQueueService(state_repository.pending)
+    state_repository = WatcherStateRepository.from_settings(settings)
+    pending_queue_service = PendingQueueService.from_state_repository(
+        state_repository
+    )
     citekey_index = note_repository.build_citekey_index()
     note_builder = NoteBuilder(
         repository=note_repository,

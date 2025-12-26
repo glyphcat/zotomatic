@@ -4,7 +4,7 @@ import time
 from pathlib import Path
 
 from zotomatic.repositories import PendingEntry
-from zotomatic.repositories.watcher_state import PendingStore
+from zotomatic.repositories.watcher_state import PendingStore, WatcherStateRepository
 
 
 class PendingQueueService:
@@ -12,6 +12,12 @@ class PendingQueueService:
 
     def __init__(self, repository: PendingStore) -> None:
         self._repository = repository
+
+    @classmethod
+    def from_state_repository(
+        cls, state_repository: WatcherStateRepository
+    ) -> PendingQueueService:
+        return cls(state_repository.pending)
 
     def enqueue(self, file_path: str | Path) -> None:
         now = int(time.time())
