@@ -116,3 +116,35 @@ class DirectoryState:
             aggregated_mtime_ns=aggregated_mtime_ns,
             last_seen_at=int(time.time()),
         )
+
+
+@dataclass(frozen=True, slots=True)
+class PendingEntry:
+    """Zotero未解決のPDFを再試行するためのキュー要素。"""
+
+    file_path: Path
+    first_seen_at: int
+    last_attempt_at: int | None
+    next_attempt_at: int
+    attempt_count: int
+    last_error: str | None
+
+    def __post_init__(self) -> None:  # type: ignore[override]
+        object.__setattr__(self, "file_path", Path(self.file_path).expanduser())
+
+
+@dataclass(frozen=True, slots=True)
+class ZoteroAttachmentState:
+    """Zotero Attachmentの状態を保存する。"""
+
+    attachment_key: str
+    parent_item_key: str | None
+    file_path: Path | None
+    mtime_ns: int | None
+    size: int | None
+    sha1: str | None
+    last_seen_at: int
+
+    def __post_init__(self) -> None:  # type: ignore[override]
+        if self.file_path is not None:
+            object.__setattr__(self, "file_path", Path(self.file_path).expanduser())

@@ -3,13 +3,15 @@
 from .note_repository import NoteRepository
 from .pdf_repository import PDFRepository
 from .types import (
+    DirectoryState,
     NoteRepositoryConfig,
     PDFRepositoryConfig,
-    DirectoryState,
+    PendingEntry,
     WatcherFileState,
     WatcherStateRepositoryConfig,
+    ZoteroAttachmentState,
 )
-from .watcher_state_repository import WatcherStateRepository
+from .state import WatcherStateRepository, create_watcher_state_repository
 
 __all__ = [
     "NoteRepository",
@@ -17,7 +19,10 @@ __all__ = [
     "NoteRepositoryConfig",
     "PDFRepositoryConfig",
     "DirectoryState",
+    "PendingEntry",
     "WatcherStateRepository",
+    "create_watcher_state_repository",
     "WatcherStateRepositoryConfig",
     "WatcherFileState",
+    "ZoteroAttachmentState",
 ]

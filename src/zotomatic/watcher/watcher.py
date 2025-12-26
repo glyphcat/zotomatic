@@ -19,7 +19,12 @@ class PDFStorageWatcher:
     def __init__(self, config: WatcherConfig) -> None:
         self._config = config
         self._logger = get_logger(config.logger_name, config.verbose_logging)
-        self._state_repository = config.state_repository
+        self._file_state_repository = (
+            config.state_repository.file_state if config.state_repository else None
+        )
+        self._directory_state_repository = (
+            config.state_repository.directory_state if config.state_repository else None
+        )
         self._seen: set[Path] = set()
         self._seen_lock = threading.Lock()
         self._retry_queue: set[Path] = set()
@@ -178,7 +183,7 @@ class PDFStorageWatcher:
     def _scan_for_new_pdfs(self) -> Iterable[Path]:
         if not self._config.watch_dir.exists():
             return []
-        if not self._state_repository:
+        if not self._directory_state_repository:
             try:
                 return [
                     p
@@ -202,7 +207,7 @@ class PDFStorageWatcher:
             for dir_path, recursive in scan_targets:
                 try:
                     current_mtime = dir_path.stat().st_mtime_ns
-                    previous = self._state_repository.get_directory_state(dir_path)
+                    previous = self._directory_state_repository.get(dir_path)
                     if (
                         previous
                         and previous.aggregated_mtime_ns == current_mtime
@@ -219,7 +224,7 @@ class PDFStorageWatcher:
 
                 try:
                     state = DirectoryState.from_path(dir_path, current_mtime)
-                    self._state_repository.upsert_directory_state(state)
+                    self._directory_state_repository.upsert(state)
                 except Exception as exc:  # pragma: no cover - sqlite dependent
                     self._logger.debug(
                         "Failed to persist directory state for %s: %s", dir_path, exc
@@ -251,10 +256,10 @@ class PDFStorageWatcher:
             return
 
         stat = None
-        if self._state_repository:
+        if self._file_state_repository:
             try:
                 stat = resolved.stat()
-                previous = self._state_repository.get_file_state(resolved)
+                previous = self._file_state_repository.get(resolved)
                 if (
                     previous
                     and previous.mtime_ns == stat.st_mtime_ns
@@ -265,7 +270,7 @@ class PDFStorageWatcher:
                         mtime_ns=stat.st_mtime_ns,
                         size=stat.st_size,
                     )
-                    self._state_repository.upsert_file_state(state)
+                    self._file_state_repository.upsert(state)
                     self._logger.debug(
                         "PDF unchanged since last scan; skipping: %s", resolved
                     )
@@ -281,7 +286,7 @@ class PDFStorageWatcher:
                 return
             self._seen.add(resolved)
 
-        if self._state_repository:
+        if self._file_state_repository:
             try:
                 if stat is None:
                     stat = resolved.stat()
@@ -290,7 +295,7 @@ class PDFStorageWatcher:
                     mtime_ns=stat.st_mtime_ns,
                     size=stat.st_size,
                 )
-                self._state_repository.upsert_file_state(state)
+                self._file_state_repository.upsert(state)
             except Exception as exc:  # pragma: no cover - sqlite/filesystem dependent
                 self._logger.debug(
                     "Failed to persist watcher state for %s: %s", resolved, exc
