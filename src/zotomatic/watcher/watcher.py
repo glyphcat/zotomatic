@@ -8,6 +8,7 @@ from watchfiles import Change, watch
 
 from zotomatic.errors import WatcherError
 from zotomatic.logging import get_logger
+from zotomatic.repositories.types import WatcherFileState
 from zotomatic.watcher.types import WatcherConfig
 
 
@@ -203,6 +204,20 @@ class PDFStorageWatcher:
             )
             self._schedule_retry(resolved)
             return
+
+        if self._state_repository:
+            try:
+                stat = resolved.stat()
+                state = WatcherFileState.from_path(
+                    file_path=resolved,
+                    mtime_ns=stat.st_mtime_ns,
+                    size=stat.st_size,
+                )
+                self._state_repository.upsert_file_state(state)
+            except Exception as exc:  # pragma: no cover - sqlite/filesystem dependent
+                self._logger.debug(
+                    "Failed to persist watcher state for %s: %s", resolved, exc
+                )
 
         with self._seen_lock:
             if resolved in self._seen:
