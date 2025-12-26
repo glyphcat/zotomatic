@@ -11,7 +11,7 @@ from .types import (
     WatcherStateRepositoryConfig,
     ZoteroAttachmentState,
 )
-from .state import WatcherStateRepository, create_watcher_state_repository
+from .watcher_state import WatcherStateRepository, create_watcher_state_repository
 
 __all__ = [
     "NoteRepository",

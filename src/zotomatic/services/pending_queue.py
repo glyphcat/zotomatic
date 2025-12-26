@@ -4,7 +4,7 @@ import time
 from pathlib import Path
 
 from zotomatic.repositories import PendingEntry
-from zotomatic.repositories.state import PendingStore
+from zotomatic.repositories.watcher_state import PendingStore
 
 
 class PendingQueueService:
