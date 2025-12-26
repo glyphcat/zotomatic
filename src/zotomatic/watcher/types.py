@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from zotomatic.errors import WatcherError
+from zotomatic.repositories import WatcherStateRepository
 
 _PDF_SUFFIX = ".pdf"
 _STABILITY_WAIT_SECONDS = 0.5
@@ -18,6 +19,7 @@ class WatcherConfig:
 
     watch_dir: Path
     on_pdf_created: Callable[[Path], None]
+    state_repository: WatcherStateRepository | None = None
     verbose_logging: bool = False
 
     def __post_init__(self) -> None:  # type: ignore[override]
@@ -45,7 +47,10 @@ class WatcherConfig:
 
     @classmethod
     def from_settings(
-        cls, settings: Mapping[str, Any], callback: Callable[[Path], None]
+        cls,
+        settings: Mapping[str, Any],
+        callback: Callable[[Path], None],
+        state_repository: WatcherStateRepository | None = None,
     ) -> "WatcherConfig":
         watch_dir = settings.get("pdf_library_dir")
         if not watch_dir:
@@ -56,5 +61,6 @@ class WatcherConfig:
         return cls(
             watch_dir=Path(watch_dir),
             on_pdf_created=callback,
+            state_repository=state_repository,
             verbose_logging=verbose,
         )

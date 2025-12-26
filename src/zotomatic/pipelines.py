@@ -16,7 +16,7 @@ from zotomatic.llm import (
 )
 from zotomatic.logging import get_logger
 from zotomatic.note import NoteBuilder, NoteBuilderConfig, NoteBuilderContext
-from zotomatic.repositories import NoteRepository, PDFRepository
+from zotomatic.repositories import NoteRepository, PDFRepository, WatcherStateRepository
 from zotomatic.watcher import PDFStorageWatcher, WatcherConfig
 from zotomatic.zotero import ZoteroClient, ZoteroClientConfig
 
@@ -150,6 +150,7 @@ def run_ready(cli_options: Mapping[str, Any] | None = None):
     # repositoryの準備
     note_repository = NoteRepository.from_settings(settings)
     pdf_repository = PDFRepository.from_settings(settings)
+    watcher_state_repository = WatcherStateRepository.from_settings(settings)
     citekey_index = note_repository.build_citekey_index()
     note_builder = NoteBuilder(
         repository=note_repository,
@@ -232,7 +233,11 @@ def run_ready(cli_options: Mapping[str, Any] | None = None):
             logger.info("Generated note -> %s", note.path)
 
     # watcherコンテキストの生成
-    watcher_config = WatcherConfig.from_settings(settings, _on_pdf_created)
+    watcher_config = WatcherConfig.from_settings(
+        settings,
+        _on_pdf_created,
+        state_repository=watcher_state_repository,
+    )
 
     # watcher起動
     logger.info("Starting watcher (ready mode)...")

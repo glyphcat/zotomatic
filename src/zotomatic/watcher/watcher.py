@@ -17,6 +17,7 @@ class PDFStorageWatcher:
     def __init__(self, config: WatcherConfig) -> None:
         self._config = config
         self._logger = get_logger(config.logger_name, config.verbose_logging)
+        self._state_repository = config.state_repository
         self._seen: set[Path] = set()
         self._seen_lock = threading.Lock()
         self._retry_queue: set[Path] = set()
