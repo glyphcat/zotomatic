@@ -64,13 +64,11 @@ class WatcherStateRepositoryConfig:
 
     @classmethod
     def from_settings(cls, settings: Mapping[str, Any]) -> WatcherStateRepositoryConfig:
-        sqlite_path = settings.get("sqlite_path")
-        if not sqlite_path:
-            raise MissingSettingError("sqlite_path")
-        # TODO: TBD
-        recursive = bool(settings.get("pdf_scan_recursive", True))
-        pattern = str(settings.get("pdf_glob_pattern", "*.pdf"))
-        return cls(sqlite_path=Path(sqlite_path))
+        return cls(sqlite_path=cls.default_path())
+
+    @staticmethod
+    def default_path() -> Path:
+        return Path(".zotomatic/db/zotomatic.db")
 
 
 @dataclass(frozen=True, slots=True)
