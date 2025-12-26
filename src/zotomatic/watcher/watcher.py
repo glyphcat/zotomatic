@@ -205,9 +205,41 @@ class PDFStorageWatcher:
             self._schedule_retry(resolved)
             return
 
+        stat = None
         if self._state_repository:
             try:
                 stat = resolved.stat()
+                previous = self._state_repository.get_file_state(resolved)
+                if (
+                    previous
+                    and previous.mtime_ns == stat.st_mtime_ns
+                    and previous.size == stat.st_size
+                ):
+                    state = WatcherFileState.from_path(
+                        file_path=resolved,
+                        mtime_ns=stat.st_mtime_ns,
+                        size=stat.st_size,
+                    )
+                    self._state_repository.upsert_file_state(state)
+                    self._logger.debug(
+                        "PDF unchanged since last scan; skipping: %s", resolved
+                    )
+                    return
+            except Exception as exc:  # pragma: no cover - sqlite/filesystem dependent
+                self._logger.debug(
+                    "Failed to consult watcher state for %s: %s", resolved, exc
+                )
+
+        with self._seen_lock:
+            if resolved in self._seen:
+                self._logger.debug("PDF already processed: %s", resolved)
+                return
+            self._seen.add(resolved)
+
+        if self._state_repository:
+            try:
+                if stat is None:
+                    stat = resolved.stat()
                 state = WatcherFileState.from_path(
                     file_path=resolved,
                     mtime_ns=stat.st_mtime_ns,
@@ -218,12 +250,6 @@ class PDFStorageWatcher:
                 self._logger.debug(
                     "Failed to persist watcher state for %s: %s", resolved, exc
                 )
-
-        with self._seen_lock:
-            if resolved in self._seen:
-                self._logger.debug("PDF already processed: %s", resolved)
-                return
-            self._seen.add(resolved)
 
         self._logger.info("New PDF detected: %s", resolved)
         self._dispatch_callback(resolved)
