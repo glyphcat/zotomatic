@@ -5,6 +5,7 @@ from .pdf_repository import PDFRepository
 from .types import (
     NoteRepositoryConfig,
     PDFRepositoryConfig,
+    DirectoryState,
     WatcherFileState,
     WatcherStateRepositoryConfig,
 )
@@ -15,6 +16,7 @@ __all__ = [
     "PDFRepository",
     "NoteRepositoryConfig",
     "PDFRepositoryConfig",
+    "DirectoryState",
     "WatcherStateRepository",
     "WatcherStateRepositoryConfig",
     "WatcherFileState",

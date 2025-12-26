@@ -96,3 +96,23 @@ class WatcherFileState:
             sha1=sha1,
             last_seen_at=int(time.time()),
         )
+
+
+@dataclass(frozen=True, slots=True)
+class DirectoryState:
+    """ディレクトリ単位のスキャン状態。"""
+
+    dir_path: Path
+    aggregated_mtime_ns: int
+    last_seen_at: int
+
+    def __post_init__(self) -> None:  # type: ignore[override]
+        object.__setattr__(self, "dir_path", Path(self.dir_path).expanduser())
+
+    @classmethod
+    def from_path(cls, dir_path: Path, aggregated_mtime_ns: int) -> DirectoryState:
+        return cls(
+            dir_path=dir_path,
+            aggregated_mtime_ns=aggregated_mtime_ns,
+            last_seen_at=int(time.time()),
+        )

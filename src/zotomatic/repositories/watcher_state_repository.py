@@ -7,15 +7,15 @@ PDFストレージの探索情報ログRepository
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
-from collections.abc import Mapping
 from typing import Iterator
 
 from zotomatic.errors import WatcherStateRepositoryError
 
-from .types import WatcherFileState, WatcherStateRepositoryConfig
+from .types import DirectoryState, WatcherFileState, WatcherStateRepositoryConfig
 
 
 @dataclass(slots=True)
@@ -76,6 +76,39 @@ class WatcherStateRepository:
             last_seen_at=row["last_seen_at"],
         )
 
+    def upsert_directory_state(self, state: DirectoryState) -> None:
+        """ディレクトリ状態をSQLiteへ書き込む。"""
+
+        query = """
+            INSERT INTO directory_state (dir_path, aggregated_mtime_ns, last_seen_at)
+            VALUES (?, ?, ?)
+            ON CONFLICT(dir_path) DO UPDATE SET
+                aggregated_mtime_ns=excluded.aggregated_mtime_ns,
+                last_seen_at=excluded.last_seen_at
+        """
+        params = (str(state.dir_path), state.aggregated_mtime_ns, state.last_seen_at)
+        with self._connect() as conn:
+            conn.execute(query, params)
+
+    def get_directory_state(self, dir_path: str | Path) -> DirectoryState | None:
+        """指定ディレクトリの状態を読み出す。"""
+
+        resolved = Path(dir_path).expanduser()
+        query = """
+            SELECT dir_path, aggregated_mtime_ns, last_seen_at
+            FROM directory_state
+            WHERE dir_path = ?
+        """
+        with self._connect() as conn:
+            row = conn.execute(query, (str(resolved),)).fetchone()
+        if row is None:
+            return None
+        return DirectoryState(
+            dir_path=Path(row["dir_path"]),
+            aggregated_mtime_ns=row["aggregated_mtime_ns"],
+            last_seen_at=row["last_seen_at"],
+        )
+
     def _ensure_initialized(self) -> None:
         sqlite_path = self.config.sqlite_path
         sqlite_path.parent.mkdir(parents=True, exist_ok=True)
@@ -122,4 +155,3 @@ class WatcherStateRepository:
             ) from exc
         finally:
             conn.close()
-
