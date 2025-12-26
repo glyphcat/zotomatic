@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import threading
 from pathlib import Path
 from typing import Iterable
@@ -8,7 +9,7 @@ from watchfiles import Change, watch
 
 from zotomatic.errors import WatcherError
 from zotomatic.logging import get_logger
-from zotomatic.repositories.types import WatcherFileState
+from zotomatic.repositories.types import DirectoryState, WatcherFileState
 from zotomatic.watcher.types import WatcherConfig
 
 
@@ -177,13 +178,57 @@ class PDFStorageWatcher:
     def _scan_for_new_pdfs(self) -> Iterable[Path]:
         if not self._config.watch_dir.exists():
             return []
+        if not self._state_repository:
+            try:
+                return [
+                    p
+                    for p in sorted(self._config.watch_dir.rglob("*.pdf"))
+                    if p.is_file()
+                ]
+            except OSError as exc:  # pragma: no cover - depends on filesystem
+                self._logger.error("Failed to list PDFs: %s", exc, exc_info=True)
+                raise WatcherError("Failed to scan watch directory.") from exc
+
+        pattern = f"*{self._config.pdf_suffix}"
+        pdfs: list[Path] = []
         try:
-            return [
-                p for p in sorted(self._config.watch_dir.rglob("*.pdf")) if p.is_file()
-            ]
+            scan_targets: list[tuple[Path, bool]] = []
+            scan_targets.append((self._config.watch_dir, False))
+            with os.scandir(self._config.watch_dir) as entries:
+                for entry in entries:
+                    if entry.is_dir():
+                        scan_targets.append((Path(entry.path), True))
+
+            for dir_path, recursive in scan_targets:
+                try:
+                    current_mtime = dir_path.stat().st_mtime_ns
+                    previous = self._state_repository.get_directory_state(dir_path)
+                    if (
+                        previous
+                        and previous.aggregated_mtime_ns == current_mtime
+                    ):
+                        continue
+                except OSError:
+                    continue
+
+                if recursive:
+                    iterator = dir_path.rglob(pattern)
+                else:
+                    iterator = dir_path.glob(pattern)
+                pdfs.extend(p for p in iterator if p.is_file())
+
+                try:
+                    state = DirectoryState.from_path(dir_path, current_mtime)
+                    self._state_repository.upsert_directory_state(state)
+                except Exception as exc:  # pragma: no cover - sqlite dependent
+                    self._logger.debug(
+                        "Failed to persist directory state for %s: %s", dir_path, exc
+                    )
         except OSError as exc:  # pragma: no cover - depends on filesystem
             self._logger.error("Failed to list PDFs: %s", exc, exc_info=True)
             raise WatcherError("Failed to scan watch directory.") from exc
+
+        return sorted(set(pdfs))
 
     def _handle_candidate(self, path: Path) -> None:
         try:
