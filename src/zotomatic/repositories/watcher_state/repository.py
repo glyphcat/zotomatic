@@ -1,47 +1,62 @@
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Protocol, runtime_checkable
 from collections.abc import Mapping
 
 from ..types import DirectoryState, PendingEntry, WatcherFileState, ZoteroAttachmentState
 
 
-@runtime_checkable
-class FileStateStore(Protocol):
+class FileStateStore(ABC):
+    @abstractmethod
     def upsert(self, state: WatcherFileState) -> None: ...
 
+    @abstractmethod
     def get(self, path: str | Path) -> WatcherFileState | None: ...
 
-
-@runtime_checkable
-class DirectoryStateStore(Protocol):
+class DirectoryStateStore(ABC):
+    @abstractmethod
     def upsert(self, state: DirectoryState) -> None: ...
 
+    @abstractmethod
     def get(self, dir_path: str | Path) -> DirectoryState | None: ...
 
 
-@runtime_checkable
-class PendingStore(Protocol):
+class PendingStore(ABC):
+    @abstractmethod
     def upsert(self, entry: PendingEntry) -> None: ...
 
+    @abstractmethod
     def get(self, file_path: str | Path) -> PendingEntry | None: ...
 
+    @abstractmethod
     def list_before(self, timestamp: int, limit: int = 50) -> list[PendingEntry]: ...
 
+    @abstractmethod
     def delete(self, file_path: str | Path) -> None: ...
 
 
-@runtime_checkable
-class ZoteroAttachmentStore(Protocol):
+class ZoteroAttachmentStore(ABC):
+    @abstractmethod
     def upsert(self, state: ZoteroAttachmentState) -> None: ...
 
 
-class WatcherStateRepository(Protocol):
-    file_state: FileStateStore
-    directory_state: DirectoryStateStore
-    pending: PendingStore
-    zotero_attachment: ZoteroAttachmentStore
+class WatcherStateRepository(ABC):
+    @property
+    @abstractmethod
+    def file_state(self) -> FileStateStore: ...
+
+    @property
+    @abstractmethod
+    def directory_state(self) -> DirectoryStateStore: ...
+
+    @property
+    @abstractmethod
+    def pending(self) -> PendingStore: ...
+
+    @property
+    @abstractmethod
+    def zotero_attachment(self) -> ZoteroAttachmentStore: ...
 
 
 def create_watcher_state_repository(

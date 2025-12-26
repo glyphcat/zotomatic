@@ -12,22 +12,38 @@ from .zotero_attachment import ZoteroAttachmentRepository
 
 
 @dataclass(slots=True)
-class SqliteWatcherStateRepository:
+class SqliteWatcherStateRepository(WatcherStateRepository):
     """SQLite実装のStateリポジトリの集約。"""
 
-    file_state: FileStateRepository
-    directory_state: DirectoryStateRepository
-    pending: PendingRepository
-    zotero_attachment: ZoteroAttachmentRepository
+    _file_state: FileStateRepository
+    _directory_state: DirectoryStateRepository
+    _pending: PendingRepository
+    _zotero_attachment: ZoteroAttachmentRepository
 
     @classmethod
     def from_settings(
         cls, settings: Mapping[str, object]
-    ) -> "SqliteWatcherStateRepository":
+    ) -> SqliteWatcherStateRepository:
         config = WatcherStateRepositoryConfig.from_settings(settings)
         return cls(
-            file_state=FileStateRepository(config),
-            directory_state=DirectoryStateRepository(config),
-            pending=PendingRepository(config),
-            zotero_attachment=ZoteroAttachmentRepository(config),
+            _file_state=FileStateRepository(config),
+            _directory_state=DirectoryStateRepository(config),
+            _pending=PendingRepository(config),
+            _zotero_attachment=ZoteroAttachmentRepository(config),
         )
+
+    @property
+    def file_state(self) -> FileStateRepository:
+        return self._file_state
+
+    @property
+    def directory_state(self) -> DirectoryStateRepository:
+        return self._directory_state
+
+    @property
+    def pending(self) -> PendingRepository:
+        return self._pending
+
+    @property
+    def zotero_attachment(self) -> ZoteroAttachmentRepository:
+        return self._zotero_attachment
