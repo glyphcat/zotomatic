@@ -7,7 +7,7 @@ from pathlib import Path
 from zotomatic.logging import get_logger
 from zotomatic.services.pending_queue import PendingQueue
 from zotomatic.services.types import PendingQueueProcessorConfig
-from zotomatic.zotero import ZoteroClient
+from zotomatic.services.zotero_resolver import ZoteroResolver
 
 
 class PendingQueueProcessor:
@@ -16,13 +16,13 @@ class PendingQueueProcessor:
     def __init__(
         self,
         queue: PendingQueue,
-        zotero_client: ZoteroClient,
+        zotero_resolver: ZoteroResolver,
         on_resolved: Callable[[Path], None],
         *,
         config: PendingQueueProcessorConfig | None = None,
     ) -> None:
         self._queue = queue
-        self._zotero_client = zotero_client
+        self._zotero_resolver = zotero_resolver
         self._on_resolved = on_resolved
         self._config = config or PendingQueueProcessorConfig()
         self._logger = get_logger(self._config.logger_name, False)
@@ -48,7 +48,7 @@ class PendingQueueProcessor:
                 continue
 
             try:
-                paper = self._zotero_client.get_paper_by_pdf(pdf_path)
+                paper = self._zotero_resolver.resolve(pdf_path)
             except Exception as exc:  # pragma: no cover - pyzotero runtime
                 self._backoff(
                     entry.file_path,

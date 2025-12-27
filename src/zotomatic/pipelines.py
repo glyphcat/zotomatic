@@ -23,6 +23,7 @@ from zotomatic.services import (
     PendingQueue,
     PendingQueueProcessor,
     PendingQueueProcessorConfig,
+    ZoteroResolver,
 )
 from zotomatic.watcher import PDFStorageWatcher, WatcherConfig
 from zotomatic.zotero import ZoteroClient, ZoteroClientConfig
@@ -266,9 +267,13 @@ def run_ready(cli_options: Mapping[str, Any] | None = None):
         on_initial_scan_complete=_on_initial_scan_complete,
     )
 
+    zotero_resolver = ZoteroResolver(
+        client=zotero_client,
+        attachment_store=state_repository.zotero_attachment,
+    )
     pending_processor = PendingQueueProcessor(
         queue=pending_queue,
-        zotero_client=zotero_client,
+        zotero_resolver=zotero_resolver,
         on_resolved=_process_pdf,
         config=pending_processor_config,
     )
@@ -294,7 +299,9 @@ def run_ready(cli_options: Mapping[str, Any] | None = None):
 
                 processed = pending_processor.run_once()
                 if processed:
-                    logger.info("Pending resolver processed %s item(s).", processed)
+                    logger.info(
+                        "Pending queue processor processed %s item(s).", processed
+                    )
                 time.sleep(pending_processor.loop_interval_seconds)
         except KeyboardInterrupt:
             logger.info("Stopping watcher at user request")
