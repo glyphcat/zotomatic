@@ -1,8 +1,19 @@
 from .builder import NoteBuilder
-from .types import NoteBuilderConfig, NoteBuilderContext
+from .updater import NoteUpdater
+from .workflow import NoteWorkflow
+from .types import (
+    NoteBuilderConfig,
+    NoteBuilderContext,
+    NoteWorkflowConfig,
+    NoteWorkflowContext,
+)
 
 __all__ = [
     "NoteBuilder",
     "NoteBuilderConfig",
     "NoteBuilderContext",
+    "NoteUpdater",
+    "NoteWorkflow",
+    "NoteWorkflowConfig",
+    "NoteWorkflowContext",
 ]

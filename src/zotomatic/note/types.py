@@ -33,6 +33,15 @@ class NoteBuilderConfig:
         return cls(Path(template_path), filename_pattern)
 
 
+@dataclass(frozen=True, slots=True)
+class NoteWorkflowConfig:
+    """Note Workflow の設定値."""
+
+    summary_enabled: bool = True
+    tag_enabled: bool = True
+    summary_mode: str = "quick"
+
+
 # TODO: Note -> NoteResultにリネーム. frozen=Trueにするか検討する.
 @dataclass(slots=True)
 class Note:
@@ -86,3 +95,11 @@ class NoteBuilderContext:
 
     def with_updates(self, **overrides: Any) -> NoteBuilderContext:
         return replace(self, **overrides)
+
+
+@dataclass(frozen=True, slots=True)
+class NoteWorkflowContext:
+    """ワークフローで扱うノート生成/更新の入力."""
+
+    builder_context: NoteBuilderContext
+    existing_path: Path | None = None
