@@ -18,7 +18,7 @@ from zotomatic.logging import get_logger
 from zotomatic.note import NoteBuilder, NoteBuilderConfig, NoteBuilderContext
 from zotomatic.repositories import NoteRepository, PDFRepository
 from zotomatic.repositories.watcher_state import WatcherStateRepository
-from zotomatic.services import PendingQueue
+from zotomatic.services import PendingQueue, PendingResolver, PendingResolverConfig
 from zotomatic.watcher import PDFStorageWatcher, WatcherConfig
 from zotomatic.zotero import ZoteroClient, ZoteroClientConfig
 
@@ -176,9 +176,7 @@ def run_ready(cli_options: Mapping[str, Any] | None = None):
         logger.info("LLM client disabled: %s", exc)
         llm_client = None
 
-    # TODO: 見づらいから外に出す？
-    def _on_pdf_created(pdf_path):
-        logger.debug("Watcher detected %s", pdf_path)
+    def _process_pdf(pdf_path: Path) -> None:
         pdf_path = Path(pdf_path)
         _ = pdf_repository  # placeholder for future PDF operations
 
@@ -199,8 +197,6 @@ def run_ready(cli_options: Mapping[str, Any] | None = None):
                     existing,
                 )
                 return
-
-        pending_queue.enqueue(pdf_path)
 
         # context = _apply_ai_enrichments(
         #     base_context,
@@ -239,11 +235,23 @@ def run_ready(cli_options: Mapping[str, Any] | None = None):
         else:
             logger.info("Generated note -> %s", note.path)
 
+    # TODO: 見づらいから外に出す？
+    def _on_pdf_created(pdf_path):
+        logger.debug("Watcher detected %s", pdf_path)
+        pending_queue.enqueue(Path(pdf_path))
+
     # watcherコンテキストの生成
     watcher_config = WatcherConfig.from_settings(
         settings,
         _on_pdf_created,
         state_repository=state_repository,
+    )
+
+    pending_resolver = PendingResolver(
+        queue=pending_queue,
+        zotero_client=zotero_client,
+        on_resolved=_process_pdf,
+        config=PendingResolverConfig.from_settings(settings),
     )
 
     # watcher起動
@@ -254,6 +262,7 @@ def run_ready(cli_options: Mapping[str, Any] | None = None):
         )
         try:
             while True:
+                pending_resolver.run_once()
                 time.sleep(1)
         except KeyboardInterrupt:
             logger.info("Stopping watcher at user request")

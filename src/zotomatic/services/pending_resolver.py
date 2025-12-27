@@ -1,12 +1,30 @@
 from __future__ import annotations
 
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass
 from pathlib import Path
 
 from zotomatic.logging import get_logger
 from zotomatic.services.pending_queue import PendingQueue
 from zotomatic.zotero import ZoteroClient
+
+
+@dataclass(frozen=True, slots=True)
+class PendingResolverConfig:
+    base_delay_seconds: int = 5
+    max_delay_seconds: int = 60
+    batch_limit: int = 50
+    logger_name: str = "zotomatic.pending"
+
+    @classmethod
+    def from_settings(cls, settings: Mapping[str, object]) -> "PendingResolverConfig":
+        return cls(
+            base_delay_seconds=int(settings.get("pending_base_delay_seconds", 5)),
+            max_delay_seconds=int(settings.get("pending_max_delay_seconds", 60)),
+            batch_limit=int(settings.get("pending_batch_limit", 50)),
+            logger_name=str(settings.get("pending_logger_name", "zotomatic.pending")),
+        )
 
 
 class PendingResolver:
@@ -18,20 +36,19 @@ class PendingResolver:
         zotero_client: ZoteroClient,
         on_resolved: Callable[[Path], None],
         *,
-        base_delay_seconds: int = 5,
-        max_delay_seconds: int = 60,
-        logger_name: str = "zotomatic.pending",
+        config: PendingResolverConfig | None = None,
     ) -> None:
         self._queue = queue
         self._zotero_client = zotero_client
         self._on_resolved = on_resolved
-        self._base_delay_seconds = base_delay_seconds
-        self._max_delay_seconds = max_delay_seconds
-        self._logger = get_logger(logger_name, False)
+        self._config = config or PendingResolverConfig()
+        self._logger = get_logger(self._config.logger_name, False)
 
-    def run_once(self, limit: int = 50) -> int:
+    def run_once(self, limit: int | None = None) -> int:
         """期限になったpendingを処理し、成功件数を返す。"""
 
+        if limit is None:
+            limit = self._config.batch_limit
         processed = 0
         for entry in self._queue.get_due(limit=limit):
             pdf_path = Path(entry.file_path)
@@ -62,8 +79,8 @@ class PendingResolver:
 
     def _backoff(self, file_path: str | Path, attempt_count: int, error: str) -> None:
         next_delay = min(
-            self._max_delay_seconds,
-            self._base_delay_seconds * (2 ** max(attempt_count, 0)),
+            self._config.max_delay_seconds,
+            self._config.base_delay_seconds * (2 ** max(attempt_count, 0)),
         )
         next_attempt_at = int(time.time()) + next_delay
         self._queue.update_attempt(
