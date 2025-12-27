@@ -1,10 +1,23 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from pathlib import Path
 from collections.abc import Mapping
+from pathlib import Path
 
-from ..types import DirectoryState, PendingEntry, WatcherFileState, ZoteroAttachmentState
+from ..types import (
+    DirectoryState,
+    PendingEntry,
+    WatcherFileState,
+    ZoteroAttachmentState,
+)
+
+
+class MetaStore(ABC):
+    @abstractmethod
+    def get(self, key: str) -> str | None: ...
+
+    @abstractmethod
+    def set(self, key: str, value: str) -> None: ...
 
 
 class FileStateStore(ABC):
@@ -13,6 +26,7 @@ class FileStateStore(ABC):
 
     @abstractmethod
     def get(self, path: str | Path) -> WatcherFileState | None: ...
+
 
 class DirectoryStateStore(ABC):
     @abstractmethod
@@ -40,8 +54,15 @@ class ZoteroAttachmentStore(ABC):
     @abstractmethod
     def upsert(self, state: ZoteroAttachmentState) -> None: ...
 
+    @abstractmethod
+    def get(self, attachment_key: str) -> ZoteroAttachmentState | None: ...
+
 
 class WatcherStateRepository(ABC):
+    @property
+    @abstractmethod
+    def meta(self) -> MetaStore: ...
+
     @property
     @abstractmethod
     def file_state(self) -> FileStateStore: ...

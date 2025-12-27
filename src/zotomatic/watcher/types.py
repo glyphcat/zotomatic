@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -19,6 +21,7 @@ class WatcherConfig:
 
     watch_dir: Path
     on_pdf_created: Callable[[Path], None]
+    on_initial_scan_complete: Callable[[], None] | None = None
     state_repository: WatcherStateRepository | None = None
     verbose_logging: bool = False
 
@@ -51,7 +54,8 @@ class WatcherConfig:
         settings: Mapping[str, Any],
         callback: Callable[[Path], None],
         state_repository: WatcherStateRepository | None = None,
-    ) -> "WatcherConfig":
+        on_initial_scan_complete: Callable[[], None] | None = None,
+    ) -> WatcherConfig:
         watch_dir = settings.get("pdf_library_dir")
         if not watch_dir:
             raise WatcherError(
@@ -62,5 +66,6 @@ class WatcherConfig:
             watch_dir=Path(watch_dir),
             on_pdf_created=callback,
             state_repository=state_repository,
+            on_initial_scan_complete=on_initial_scan_complete,
             verbose_logging=verbose,
         )

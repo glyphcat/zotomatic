@@ -3,6 +3,7 @@
 from .repository import (
     DirectoryStateStore,
     FileStateStore,
+    MetaStore,
     PendingStore,
     WatcherStateRepository,
     ZoteroAttachmentStore,
@@ -12,6 +13,7 @@ from .repository import (
 __all__ = [
     "DirectoryStateStore",
     "FileStateStore",
+    "MetaStore",
     "PendingStore",
     "WatcherStateRepository",
     "ZoteroAttachmentStore",

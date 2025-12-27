@@ -29,6 +29,7 @@ This directory stores the SQLite schema and migrations used by Zotomatic.
 - If Zotero resolves an attachment, upsert into `zotero_attachment` and remove from `pending`.
 - If Zotero does not resolve, insert/update `pending` with backoff fields.
 - During polling fallback, use `directory_state` to skip unmodified directories.
+- `meta.boot_seed_complete` tracks whether the initial pending seeding completed.
 
 ## Indexes
 

@@ -1,5 +1,6 @@
 """pipelines"""
 
+import threading
 import time
 from collections.abc import Mapping
 from datetime import datetime, timezone
@@ -153,9 +154,13 @@ def run_ready(cli_options: Mapping[str, Any] | None = None):
     note_repository = NoteRepository.from_settings(settings)
     pdf_repository = PDFRepository.from_settings(settings)
     state_repository = WatcherStateRepository.from_settings(settings)
-    pending_queue = PendingQueue.from_state_repository(
-        state_repository
-    )
+    pending_queue = PendingQueue.from_state_repository(state_repository)
+    pending_resolver_config = PendingResolverConfig.from_settings(settings)
+    seed_batch_limit = pending_resolver_config.batch_limit
+    pending_seed_buffer: list[Path] = []
+    pending_seed_lock = threading.Lock()
+    runtime_seed_complete = False
+    boot_seed_complete = state_repository.meta.get("boot_seed_complete") == "1"
     citekey_index = note_repository.build_citekey_index()
     note_builder = NoteBuilder(
         repository=note_repository,
@@ -238,20 +243,30 @@ def run_ready(cli_options: Mapping[str, Any] | None = None):
     # TODO: 見づらいから外に出す？
     def _on_pdf_created(pdf_path):
         logger.debug("Watcher detected %s", pdf_path)
-        pending_queue.enqueue(Path(pdf_path))
+        pdf_path = Path(pdf_path)
+        if boot_seed_complete:
+            pending_queue.enqueue(pdf_path)
+            return
+        with pending_seed_lock:
+            pending_seed_buffer.append(pdf_path)
+
+    def _on_initial_scan_complete() -> None:
+        nonlocal runtime_seed_complete
+        runtime_seed_complete = True
 
     # watcherコンテキストの生成
     watcher_config = WatcherConfig.from_settings(
         settings,
         _on_pdf_created,
         state_repository=state_repository,
+        on_initial_scan_complete=_on_initial_scan_complete,
     )
 
     pending_resolver = PendingResolver(
         queue=pending_queue,
         zotero_client=zotero_client,
         on_resolved=_process_pdf,
-        config=PendingResolverConfig.from_settings(settings),
+        config=pending_resolver_config,
     )
 
     # watcher起動
@@ -262,6 +277,17 @@ def run_ready(cli_options: Mapping[str, Any] | None = None):
         )
         try:
             while True:
+                if not boot_seed_complete:
+                    with pending_seed_lock:
+                        seed_batch = pending_seed_buffer[:seed_batch_limit]
+                        del pending_seed_buffer[:seed_batch_limit]
+                    for path in seed_batch:
+                        pending_queue.enqueue(path)
+                    if runtime_seed_complete and not pending_seed_buffer:
+                        state_repository.meta.set("boot_seed_complete", "1")
+                        boot_seed_complete = True
+                        logger.info("Boot seed completed for pending queue.")
+
                 processed = pending_resolver.run_once()
                 if processed:
                     logger.info("Pending resolver processed %s item(s).", processed)

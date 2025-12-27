@@ -3,15 +3,16 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Mapping
 
-from .base import SQLiteRepository
+from ..repository import PendingStore
 from ...types import PendingEntry, WatcherStateRepositoryConfig
+from .base import SQLiteRepository
 
 
-class PendingRepository(SQLiteRepository):
+class SqlitePendingStore(SQLiteRepository, PendingStore):
     """pendingテーブルへのアクセスを担当する。"""
 
     @classmethod
-    def from_settings(cls, settings: Mapping[str, object]) -> "PendingRepository":
+    def from_settings(cls, settings: Mapping[str, object]) -> SqlitePendingStore:
         return cls(WatcherStateRepositoryConfig.from_settings(settings))
 
     def upsert(self, entry: PendingEntry) -> None:

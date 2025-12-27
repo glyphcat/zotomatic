@@ -1,18 +1,20 @@
 from __future__ import annotations
 
-from typing import Mapping
+from collections.abc import Mapping
+from pathlib import Path
 
-from .base import SQLiteRepository
 from ...types import WatcherStateRepositoryConfig, ZoteroAttachmentState
+from ..repository import ZoteroAttachmentStore
+from .base import SQLiteRepository
 
 
-class ZoteroAttachmentRepository(SQLiteRepository):
+class SqliteZoteroAttachmentStore(SQLiteRepository, ZoteroAttachmentStore):
     """zotero_attachmentテーブルへのアクセスを担当する。"""
 
     @classmethod
     def from_settings(
         cls, settings: Mapping[str, object]
-    ) -> "ZoteroAttachmentRepository":
+    ) -> SqliteZoteroAttachmentStore:
         return cls(WatcherStateRepositoryConfig.from_settings(settings))
 
     def upsert(self, state: ZoteroAttachmentState) -> None:
@@ -46,3 +48,30 @@ class ZoteroAttachmentRepository(SQLiteRepository):
         )
         with self._connect() as conn:
             conn.execute(query, params)
+
+    def get(self, attachment_key: str) -> ZoteroAttachmentState | None:
+        query = """
+            SELECT
+                attachment_key,
+                parent_item_key,
+                file_path,
+                mtime_ns,
+                size,
+                sha1,
+                last_seen_at
+            FROM zotero_attachment
+            WHERE attachment_key = ?
+        """
+        with self._connect() as conn:
+            row = conn.execute(query, (attachment_key,)).fetchone()
+        if row is None:
+            return None
+        return ZoteroAttachmentState(
+            attachment_key=row["attachment_key"],
+            parent_item_key=row["parent_item_key"],
+            file_path=Path(row["file_path"]) if row["file_path"] else None,
+            mtime_ns=row["mtime_ns"],
+            size=row["size"],
+            sha1=row["sha1"],
+            last_seen_at=row["last_seen_at"],
+        )

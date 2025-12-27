@@ -4,21 +4,23 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 
 from ...types import WatcherStateRepositoryConfig
-from ..repository import WatcherStateRepository
-from .directory_state import DirectoryStateRepository
-from .file_state import FileStateRepository
-from .pending import PendingRepository
-from .zotero_attachment import ZoteroAttachmentRepository
+from ..repository import MetaStore, WatcherStateRepository
+from .directory_state import SqliteDirectoryStateStore
+from .file_state import SqliteFileStateStore
+from .meta import SqliteMetaStore
+from .pending import SqlitePendingStore
+from .zotero_attachment import SqliteZoteroAttachmentStore
 
 
 @dataclass(slots=True)
 class SqliteWatcherStateRepository(WatcherStateRepository):
     """SQLite実装のStateリポジトリの集約。"""
 
-    _file_state: FileStateRepository
-    _directory_state: DirectoryStateRepository
-    _pending: PendingRepository
-    _zotero_attachment: ZoteroAttachmentRepository
+    _file_state: SqliteFileStateStore
+    _directory_state: SqliteDirectoryStateStore
+    _pending: SqlitePendingStore
+    _meta: SqliteMetaStore
+    _zotero_attachment: SqliteZoteroAttachmentStore
 
     @classmethod
     def from_settings(
@@ -26,24 +28,29 @@ class SqliteWatcherStateRepository(WatcherStateRepository):
     ) -> SqliteWatcherStateRepository:
         config = WatcherStateRepositoryConfig.from_settings(settings)
         return cls(
-            _file_state=FileStateRepository(config),
-            _directory_state=DirectoryStateRepository(config),
-            _pending=PendingRepository(config),
-            _zotero_attachment=ZoteroAttachmentRepository(config),
+            _file_state=SqliteFileStateStore(config),
+            _directory_state=SqliteDirectoryStateStore(config),
+            _pending=SqlitePendingStore(config),
+            _meta=SqliteMetaStore(config),
+            _zotero_attachment=SqliteZoteroAttachmentStore(config),
         )
 
     @property
-    def file_state(self) -> FileStateRepository:
+    def file_state(self) -> SqliteFileStateStore:
         return self._file_state
 
     @property
-    def directory_state(self) -> DirectoryStateRepository:
+    def directory_state(self) -> SqliteDirectoryStateStore:
         return self._directory_state
 
     @property
-    def pending(self) -> PendingRepository:
+    def pending(self) -> SqlitePendingStore:
         return self._pending
 
     @property
-    def zotero_attachment(self) -> ZoteroAttachmentRepository:
+    def meta(self) -> SqliteMetaStore:
+        return self._meta
+
+    @property
+    def zotero_attachment(self) -> SqliteZoteroAttachmentStore:
         return self._zotero_attachment

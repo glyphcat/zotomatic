@@ -125,6 +125,11 @@ class PDFStorageWatcher:
 
     def _initial_scan(self) -> None:
         self._poll_for_new_files()
+        if self._config.on_initial_scan_complete:
+            try:
+                self._config.on_initial_scan_complete()
+            except Exception:  # pragma: no cover - callback depends on caller
+                self._logger.exception("Initial scan completion callback failed.")
 
     def _run_with_watchfiles(self) -> None:
         accepted_changes = {

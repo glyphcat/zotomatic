@@ -3,17 +3,16 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Mapping
 
-from .base import SQLiteRepository
+from ..repository import DirectoryStateStore
 from ...types import DirectoryState, WatcherStateRepositoryConfig
+from .base import SQLiteRepository
 
 
-class DirectoryStateRepository(SQLiteRepository):
+class SqliteDirectoryStateStore(SQLiteRepository, DirectoryStateStore):
     """directory_stateテーブルへのアクセスを担当する。"""
 
     @classmethod
-    def from_settings(
-        cls, settings: Mapping[str, object]
-    ) -> "DirectoryStateRepository":
+    def from_settings(cls, settings: Mapping[str, object]) -> SqliteDirectoryStateStore:
         return cls(WatcherStateRepositoryConfig.from_settings(settings))
 
     def upsert(self, state: DirectoryState) -> None:
