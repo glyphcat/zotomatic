@@ -7,7 +7,7 @@ from zotomatic.repositories import PendingEntry
 from zotomatic.repositories.watcher_state import PendingStore, WatcherStateRepository
 
 
-class PendingQueueService:
+class PendingQueue:
     """pendingテーブルをキューとして扱うサービス。"""
 
     def __init__(self, repository: PendingStore) -> None:
@@ -16,7 +16,7 @@ class PendingQueueService:
     @classmethod
     def from_state_repository(
         cls, state_repository: WatcherStateRepository
-    ) -> PendingQueueService:
+    ) -> PendingQueue:
         return cls(state_repository.pending)
 
     def enqueue(self, file_path: str | Path) -> None:

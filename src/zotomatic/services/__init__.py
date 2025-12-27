@@ -1,5 +1,5 @@
 """Service layer for zotomatic."""
 
-from .pending_queue import PendingQueueService
+from .pending_queue import PendingQueue
 
-__all__ = ["PendingQueueService"]
+__all__ = ["PendingQueue"]

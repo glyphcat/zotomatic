@@ -18,7 +18,7 @@ from zotomatic.logging import get_logger
 from zotomatic.note import NoteBuilder, NoteBuilderConfig, NoteBuilderContext
 from zotomatic.repositories import NoteRepository, PDFRepository
 from zotomatic.repositories.watcher_state import WatcherStateRepository
-from zotomatic.services import PendingQueueService
+from zotomatic.services import PendingQueue
 from zotomatic.watcher import PDFStorageWatcher, WatcherConfig
 from zotomatic.zotero import ZoteroClient, ZoteroClientConfig
 
@@ -153,7 +153,7 @@ def run_ready(cli_options: Mapping[str, Any] | None = None):
     note_repository = NoteRepository.from_settings(settings)
     pdf_repository = PDFRepository.from_settings(settings)
     state_repository = WatcherStateRepository.from_settings(settings)
-    pending_queue_service = PendingQueueService.from_state_repository(
+    pending_queue = PendingQueue.from_state_repository(
         state_repository
     )
     citekey_index = note_repository.build_citekey_index()
@@ -200,7 +200,7 @@ def run_ready(cli_options: Mapping[str, Any] | None = None):
                 )
                 return
 
-        pending_queue_service.enqueue(pdf_path)
+        pending_queue.enqueue(pdf_path)
 
         # context = _apply_ai_enrichments(
         #     base_context,
