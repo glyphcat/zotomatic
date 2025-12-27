@@ -69,3 +69,8 @@ class ZoteroResolver:
             self._logger.debug("Missing attachment key for %s", path)
 
         return paper
+
+    @property
+    def is_enabled(self) -> bool:
+        """Zotero関連の設定不足を判定"""
+        return self._client.is_enabled()

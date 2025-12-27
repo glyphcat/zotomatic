@@ -166,6 +166,7 @@ def run_ready(cli_options: Mapping[str, Any] | None = None):
     pending_seed_lock = threading.Lock()
     runtime_seed_complete = False
     boot_seed_complete = state_repository.meta.get("boot_seed_complete") == "1"
+    stop_event = threading.Event()
     citekey_index = note_repository.build_citekey_index()
     note_builder = NoteBuilder(
         repository=note_repository,
@@ -276,6 +277,7 @@ def run_ready(cli_options: Mapping[str, Any] | None = None):
         zotero_resolver=zotero_resolver,
         on_resolved=_process_pdf,
         config=pending_processor_config,
+        stop_event=stop_event,
     )
 
     # watcher起動
@@ -302,8 +304,10 @@ def run_ready(cli_options: Mapping[str, Any] | None = None):
                     logger.info(
                         "Pending queue processor processed %s item(s).", processed
                     )
-                time.sleep(pending_processor.loop_interval_seconds)
+                if stop_event.wait(pending_processor.loop_interval_seconds):
+                    break
         except KeyboardInterrupt:
+            stop_event.set()
             logger.info("Stopping watcher at user request")
 
     logger.info("Watcher stopped (ready mode).")

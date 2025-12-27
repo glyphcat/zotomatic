@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import threading
 import time
 from collections.abc import Callable
 from pathlib import Path
+
+import fitz
 
 from zotomatic.logging import get_logger
 from zotomatic.services.pending_queue import PendingQueue
@@ -20,12 +23,14 @@ class PendingQueueProcessor:
         on_resolved: Callable[[Path], None],
         *,
         config: PendingQueueProcessorConfig | None = None,
+        stop_event: threading.Event | None = None,
     ) -> None:
         self._queue = queue
         self._zotero_resolver = zotero_resolver
         self._on_resolved = on_resolved
         self._config = config or PendingQueueProcessorConfig()
         self._logger = get_logger(self._config.logger_name, False)
+        self._stop_event = stop_event
 
     def run_once(self, limit: int | None = None) -> int:
         """期限になったpendingを処理し、成功件数を返す。"""
@@ -36,15 +41,22 @@ class PendingQueueProcessor:
         due_entries = self._queue.get_due(limit=limit)
         if due_entries:
             self._logger.info("Pending due entries: %s", len(due_entries))
+        if due_entries and not self._zotero_resolver.is_enabled:
+            for entry in due_entries:
+                self._drop_permanent(
+                    entry.file_path,
+                    "Zotero settings missing (library_id/api_token)",
+                )
+            return 0
         for entry in due_entries:
+            if self._stop_event and self._stop_event.is_set():
+                break
             pdf_path = Path(entry.file_path)
             if not pdf_path.exists():
-                self._backoff(
-                    entry.file_path,
-                    entry.attempt_count,
-                    "PDF not found",
-                    entry.attempt_count + 1,
-                )
+                self._drop_permanent(entry.file_path, "PDF not found")
+                continue
+            if not self._is_pdf_readable(pdf_path):
+                self._drop_permanent(entry.file_path, "PDF is unreadable")
                 continue
 
             try:
@@ -117,3 +129,21 @@ class PendingQueueProcessor:
             next_delay,
             error,
         )
+
+    def _drop_permanent(self, file_path: str | Path, reason: str) -> None:
+        self._queue.resolve(file_path)
+        self._logger.warning("Pending dropped: %s (%s)", file_path, reason)
+
+    def _is_pdf_readable(self, pdf_path: Path) -> bool:
+        """PDFファイル破損チェック"""
+        try:
+            doc = fitz.open(pdf_path)
+        except Exception:
+            return False
+        else:
+            doc.close()
+            return True
+
+    @property
+    def stop_event(self) -> threading.Event | None:
+        return self._stop_event
