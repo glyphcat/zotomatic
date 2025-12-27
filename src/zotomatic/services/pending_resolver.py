@@ -15,14 +15,33 @@ class PendingResolverConfig:
     base_delay_seconds: int = 5
     max_delay_seconds: int = 60
     batch_limit: int = 50
+    loop_interval_seconds: int = 3
+    max_attempts: int = 10
     logger_name: str = "zotomatic.pending"
 
     @classmethod
     def from_settings(cls, settings: Mapping[str, object]) -> "PendingResolverConfig":
+        def _get_int(key: str, default: int) -> int:
+            value = settings.get(key, default)
+            if isinstance(value, bool):
+                return default
+            if isinstance(value, int):
+                return value
+            if isinstance(value, float):
+                return int(value)
+            if isinstance(value, str):
+                try:
+                    return int(value.strip())
+                except ValueError:
+                    return default
+            return default
+
         return cls(
-            base_delay_seconds=int(settings.get("pending_base_delay_seconds", 5)),
-            max_delay_seconds=int(settings.get("pending_max_delay_seconds", 60)),
-            batch_limit=int(settings.get("pending_batch_limit", 50)),
+            base_delay_seconds=_get_int("pending_base_delay_seconds", 5),
+            max_delay_seconds=_get_int("pending_max_delay_seconds", 60),
+            batch_limit=_get_int("pending_batch_limit", 50),
+            loop_interval_seconds=_get_int("pending_loop_interval_seconds", 3),
+            max_attempts=_get_int("pending_max_attempts", 10),
             logger_name=str(settings.get("pending_logger_name", "zotomatic.pending")),
         )
 
@@ -101,9 +120,21 @@ class PendingResolver:
 
         return processed
 
+    @property
+    def loop_interval_seconds(self) -> int:
+        return self._config.loop_interval_seconds
+
     def _backoff(
         self, file_path: str | Path, attempt_count: int, error: str, next_attempt: int
     ) -> None:
+        if next_attempt > self._config.max_attempts:
+            self._queue.resolve(file_path)
+            self._logger.warning(
+                "Pending dropped after max attempts for %s: %s",
+                file_path,
+                error,
+            )
+            return
         next_delay = min(
             self._config.max_delay_seconds,
             self._config.base_delay_seconds * (2 ** max(attempt_count, 0)),

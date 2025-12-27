@@ -265,7 +265,7 @@ def run_ready(cli_options: Mapping[str, Any] | None = None):
                 processed = pending_resolver.run_once()
                 if processed:
                     logger.info("Pending resolver processed %s item(s).", processed)
-                time.sleep(1)
+                time.sleep(pending_resolver.loop_interval_seconds)
         except KeyboardInterrupt:
             logger.info("Stopping watcher at user request")
 
