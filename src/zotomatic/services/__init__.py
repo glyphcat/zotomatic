@@ -5,5 +5,11 @@ from .pending_queue_processor import (
     PendingQueueProcessor,
     PendingQueueProcessorConfig,
 )
+from .zotero_resolver import ZoteroResolver
 
-__all__ = ["PendingQueue", "PendingQueueProcessor", "PendingQueueProcessorConfig"]
+__all__ = [
+    "PendingQueue",
+    "PendingQueueProcessor",
+    "PendingQueueProcessorConfig",
+    "ZoteroResolver",
+]
