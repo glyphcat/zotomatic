@@ -5,7 +5,10 @@ from pathlib import Path
 
 from zotomatic.logging import get_logger
 from zotomatic.repositories import ZoteroAttachmentState
-from zotomatic.repositories.watcher_state import ZoteroAttachmentStore
+from zotomatic.repositories.watcher_state import (
+    WatcherStateRepository,
+    ZoteroAttachmentStore,
+)
 from zotomatic.zotero import ZoteroClient
 from zotomatic.zotero.types import ZoteroPaper
 
@@ -23,6 +26,12 @@ class ZoteroResolver:
         self._client = client
         self._attachment_store = attachment_store
         self._logger = get_logger(logger_name, False)
+
+    @classmethod
+    def from_state_repository(
+        cls, client: ZoteroClient, state_repository: WatcherStateRepository
+    ) -> ZoteroResolver:
+        return cls(client=client, attachment_store=state_repository.zotero_attachment)
 
     def resolve(self, pdf_path: str | Path) -> ZoteroPaper | None:
         path = Path(pdf_path)

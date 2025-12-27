@@ -267,9 +267,9 @@ def run_ready(cli_options: Mapping[str, Any] | None = None):
         on_initial_scan_complete=_on_initial_scan_complete,
     )
 
-    zotero_resolver = ZoteroResolver(
+    zotero_resolver = ZoteroResolver.from_state_repository(
         client=zotero_client,
-        attachment_store=state_repository.zotero_attachment,
+        state_repository=state_repository,
     )
     pending_processor = PendingQueueProcessor(
         queue=pending_queue,
