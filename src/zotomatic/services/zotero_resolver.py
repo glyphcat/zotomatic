@@ -35,7 +35,9 @@ class ZoteroResolver:
 
     def resolve(self, pdf_path: str | Path) -> ZoteroPaper | None:
         path = Path(pdf_path)
-        paper = self._client.get_paper_by_pdf(path)
+        paper, attachment_key, parent_item_key = (
+            self._client.get_paper_with_attachment_info(path)
+        )
         if not paper:
             return None
 
@@ -48,19 +50,22 @@ class ZoteroResolver:
         except OSError:
             self._logger.debug("Failed to stat PDF for resolver: %s", path)
 
-        try:
-            self._attachment_store.upsert(
-                ZoteroAttachmentState(
-                    attachment_key=paper.key,
-                    parent_item_key=None,
-                    file_path=path,
-                    mtime_ns=mtime_ns,
-                    size=size,
-                    sha1=None,
-                    last_seen_at=int(time.time()),
+        if attachment_key:
+            try:
+                self._attachment_store.upsert(
+                    ZoteroAttachmentState(
+                        attachment_key=attachment_key,
+                        parent_item_key=parent_item_key,
+                        file_path=path,
+                        mtime_ns=mtime_ns,
+                        size=size,
+                        sha1=None,
+                        last_seen_at=int(time.time()),
+                    )
                 )
-            )
-        except Exception as exc:  # pragma: no cover - sqlite dependent
-            self._logger.debug("Failed to persist attachment state: %s", exc)
+            except Exception as exc:  # pragma: no cover - sqlite dependent
+                self._logger.debug("Failed to persist attachment state: %s", exc)
+        else:
+            self._logger.debug("Missing attachment key for %s", path)
 
         return paper

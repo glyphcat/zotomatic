@@ -43,6 +43,20 @@ class ZoteroClient:
             return None
         return _find_by_pdf_path(str(pdf_path), self._client)
 
+    def get_paper_with_attachment_info(
+        self, pdf_path: Path
+    ) -> tuple[ZoteroPaper | None, str | None, str | None]:
+        if self._client is None:
+            return None, None, None
+        attachment, parent_key = _find_attachment_by_pdf_path(
+            str(pdf_path), self._client
+        )
+        if not parent_key:
+            return None, None, None
+        paper = _build(self._client, parent_key, str(pdf_path))
+        attachment_key = attachment.get("key") if attachment else None
+        return paper, attachment_key, parent_key
+
     def build_context(self, pdf_path: Path) -> NoteBuilderContext | None:
         """Build context for NoteBuilder."""
         paper = self.get_paper_by_pdf(pdf_path)
@@ -97,6 +111,13 @@ def _extract_year(date_str: str) -> Optional[str]:
 
 
 def _find_by_pdf_path(pdf_path: str, zot_client) -> Optional[ZoteroPaper]:
+    attachment, parent = _find_attachment_by_pdf_path(pdf_path, zot_client)
+    if not parent:
+        return None
+    return _build(zot_client, parent, pdf_path)
+
+
+def _find_attachment_by_pdf_path(pdf_path: str, zot_client) -> tuple[dict | None, str | None]:
     base = os.path.basename(pdf_path)
     pdf_path_n = os.path.normpath(pdf_path)
 
@@ -104,7 +125,7 @@ def _find_by_pdf_path(pdf_path: str, zot_client) -> Optional[ZoteroPaper]:
     try:
         attachments = zot_client.everything(zot_client.items(itemType="attachment"))
     except Exception:  # pragma: no cover - pyzotero runtime error
-        return None
+        return None, None
 
     # 1) パス末尾一致
     for att in attachments:
@@ -114,7 +135,7 @@ def _find_by_pdf_path(pdf_path: str, zot_client) -> Optional[ZoteroPaper]:
             if pdf_path_n.endswith(ap) or os.path.basename(ap) == base:
                 parent = d.get("parentItem")
                 if parent:
-                    return _build(zot_client, parent, pdf_path)
+                    return att, parent
 
     # 2) ファイル名一致
     for att in attachments:
@@ -122,9 +143,9 @@ def _find_by_pdf_path(pdf_path: str, zot_client) -> Optional[ZoteroPaper]:
         if os.path.basename(d.get("path") or d.get("filename") or "") == base:
             parent = d.get("parentItem")
             if parent:
-                return _build(zot_client, parent, pdf_path)
+                return att, parent
 
-    return None
+    return None, None
 
 
 def _build(zot_client, item_key: str, pdf_path: str) -> ZoteroPaper:
