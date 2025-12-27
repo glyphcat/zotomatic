@@ -11,7 +11,7 @@ from zotomatic.zotero import ZoteroClient
 
 
 @dataclass(frozen=True, slots=True)
-class PendingResolverConfig:
+class PendingQueueProcessorConfig:
     base_delay_seconds: int = 5
     max_delay_seconds: int = 60
     batch_limit: int = 50
@@ -20,7 +20,9 @@ class PendingResolverConfig:
     logger_name: str = "zotomatic.pending"
 
     @classmethod
-    def from_settings(cls, settings: Mapping[str, object]) -> "PendingResolverConfig":
+    def from_settings(
+        cls, settings: Mapping[str, object]
+    ) -> "PendingQueueProcessorConfig":
         def _get_int(key: str, default: int) -> int:
             value = settings.get(key, default)
             if isinstance(value, bool):
@@ -46,7 +48,7 @@ class PendingResolverConfig:
         )
 
 
-class PendingResolver:
+class PendingQueueProcessor:
     """pendingキューを処理してZotero解決を試みる。"""
 
     def __init__(
@@ -55,12 +57,12 @@ class PendingResolver:
         zotero_client: ZoteroClient,
         on_resolved: Callable[[Path], None],
         *,
-        config: PendingResolverConfig | None = None,
+        config: PendingQueueProcessorConfig | None = None,
     ) -> None:
         self._queue = queue
         self._zotero_client = zotero_client
         self._on_resolved = on_resolved
-        self._config = config or PendingResolverConfig()
+        self._config = config or PendingQueueProcessorConfig()
         self._logger = get_logger(self._config.logger_name, False)
 
     def run_once(self, limit: int | None = None) -> int:

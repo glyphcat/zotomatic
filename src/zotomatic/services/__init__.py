@@ -1,6 +1,9 @@
 """Service layer for zotomatic."""
 
 from .pending_queue import PendingQueue
-from .pending_resolver import PendingResolver, PendingResolverConfig
+from .pending_queue_processor import (
+    PendingQueueProcessor,
+    PendingQueueProcessorConfig,
+)
 
-__all__ = ["PendingQueue", "PendingResolver", "PendingResolverConfig"]
+__all__ = ["PendingQueue", "PendingQueueProcessor", "PendingQueueProcessorConfig"]

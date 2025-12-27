@@ -19,7 +19,11 @@ from zotomatic.logging import get_logger
 from zotomatic.note import NoteBuilder, NoteBuilderConfig, NoteBuilderContext
 from zotomatic.repositories import NoteRepository, PDFRepository
 from zotomatic.repositories.watcher_state import WatcherStateRepository
-from zotomatic.services import PendingQueue, PendingResolver, PendingResolverConfig
+from zotomatic.services import (
+    PendingQueue,
+    PendingQueueProcessor,
+    PendingQueueProcessorConfig,
+)
 from zotomatic.watcher import PDFStorageWatcher, WatcherConfig
 from zotomatic.zotero import ZoteroClient, ZoteroClientConfig
 
@@ -155,8 +159,8 @@ def run_ready(cli_options: Mapping[str, Any] | None = None):
     pdf_repository = PDFRepository.from_settings(settings)
     state_repository = WatcherStateRepository.from_settings(settings)
     pending_queue = PendingQueue.from_state_repository(state_repository)
-    pending_resolver_config = PendingResolverConfig.from_settings(settings)
-    seed_batch_limit = pending_resolver_config.batch_limit
+    pending_processor_config = PendingQueueProcessorConfig.from_settings(settings)
+    seed_batch_limit = pending_processor_config.batch_limit
     pending_seed_buffer: list[Path] = []
     pending_seed_lock = threading.Lock()
     runtime_seed_complete = False
@@ -262,11 +266,11 @@ def run_ready(cli_options: Mapping[str, Any] | None = None):
         on_initial_scan_complete=_on_initial_scan_complete,
     )
 
-    pending_resolver = PendingResolver(
+    pending_processor = PendingQueueProcessor(
         queue=pending_queue,
         zotero_client=zotero_client,
         on_resolved=_process_pdf,
-        config=pending_resolver_config,
+        config=pending_processor_config,
     )
 
     # watcher起動
@@ -288,10 +292,10 @@ def run_ready(cli_options: Mapping[str, Any] | None = None):
                         boot_seed_complete = True
                         logger.info("Boot seed completed for pending queue.")
 
-                processed = pending_resolver.run_once()
+                processed = pending_processor.run_once()
                 if processed:
                     logger.info("Pending resolver processed %s item(s).", processed)
-                time.sleep(pending_resolver.loop_interval_seconds)
+                time.sleep(pending_processor.loop_interval_seconds)
         except KeyboardInterrupt:
             logger.info("Stopping watcher at user request")
 
