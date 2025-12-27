@@ -50,34 +50,60 @@ class PendingResolver:
         if limit is None:
             limit = self._config.batch_limit
         processed = 0
-        for entry in self._queue.get_due(limit=limit):
+        due_entries = self._queue.get_due(limit=limit)
+        if due_entries:
+            self._logger.info("Pending due entries: %s", len(due_entries))
+        for entry in due_entries:
             pdf_path = Path(entry.file_path)
             if not pdf_path.exists():
-                self._backoff(entry.file_path, entry.attempt_count, "PDF not found")
+                self._backoff(
+                    entry.file_path,
+                    entry.attempt_count,
+                    "PDF not found",
+                    entry.attempt_count + 1,
+                )
                 continue
 
             try:
                 paper = self._zotero_client.get_paper_by_pdf(pdf_path)
             except Exception as exc:  # pragma: no cover - pyzotero runtime
-                self._backoff(entry.file_path, entry.attempt_count, str(exc))
+                self._backoff(
+                    entry.file_path,
+                    entry.attempt_count,
+                    str(exc),
+                    entry.attempt_count + 1,
+                )
                 continue
 
             if not paper:
-                self._backoff(entry.file_path, entry.attempt_count, "Zotero unresolved")
+                self._backoff(
+                    entry.file_path,
+                    entry.attempt_count,
+                    "Zotero unresolved",
+                    entry.attempt_count + 1,
+                )
                 continue
 
             try:
                 self._on_resolved(pdf_path)
             except Exception as exc:  # pragma: no cover - callback depends on caller
-                self._backoff(entry.file_path, entry.attempt_count, str(exc))
+                self._backoff(
+                    entry.file_path,
+                    entry.attempt_count,
+                    str(exc),
+                    entry.attempt_count + 1,
+                )
                 continue
 
             self._queue.resolve(entry.file_path)
             processed += 1
+            self._logger.info("Pending resolved: %s", entry.file_path)
 
         return processed
 
-    def _backoff(self, file_path: str | Path, attempt_count: int, error: str) -> None:
+    def _backoff(
+        self, file_path: str | Path, attempt_count: int, error: str, next_attempt: int
+    ) -> None:
         next_delay = min(
             self._config.max_delay_seconds,
             self._config.base_delay_seconds * (2 ** max(attempt_count, 0)),
@@ -85,8 +111,14 @@ class PendingResolver:
         next_attempt_at = int(time.time()) + next_delay
         self._queue.update_attempt(
             file_path=file_path,
-            attempt_count=attempt_count + 1,
+            attempt_count=next_attempt,
             next_attempt_at=next_attempt_at,
             last_error=error,
         )
-        self._logger.debug("Pending backoff for %s: %s", file_path, error)
+        self._logger.info(
+            "Pending backoff for %s (attempt=%s, next=%ss): %s",
+            file_path,
+            next_attempt,
+            next_delay,
+            error,
+        )
