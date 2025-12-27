@@ -13,7 +13,12 @@ from zotomatic.note.types import (
 )
 from zotomatic.note.updater import NoteUpdater
 from zotomatic.repositories import NoteRepository
-from zotomatic.utils.note import extract_summary_block, parse_frontmatter, parse_tags
+from zotomatic.utils.note import (
+    extract_summary_block,
+    parse_frontmatter,
+    parse_tags,
+    update_frontmatter_value,
+)
 
 
 class NoteWorkflow:
@@ -79,6 +84,35 @@ class NoteWorkflow:
             zotomatic_last_updated=datetime.now(timezone.utc).isoformat(),
         )
         self._note_updater.update_existing(context=builder_context, existing=existing)
+        return True
+
+    def update_pdf_path_if_changed(self, context: NoteWorkflowContext) -> bool:
+        existing = context.existing_path
+        if existing is None:
+            raise ValueError("existing_path is required for pdf_local updates.")
+        try:
+            text = existing.read_text(encoding=self._note_repository.config.encoding)
+        except OSError:
+            return False
+        pdf_path = context.builder_context.pdf_path
+        if not pdf_path:
+            return False
+        updated, changed = update_frontmatter_value(
+            text, "pdf_local", pdf_path
+        )
+        if not changed:
+            return False
+        try:
+            existing.write_text(
+                updated, encoding=self._note_repository.config.encoding
+            )
+        except OSError:  # pragma: no cover - filesystem dependent
+            return False
+        self._logger.info(
+            "Updated pdf_local for citekey=%s at %s",
+            context.builder_context.citekey,
+            existing,
+        )
         return True
 
     def _apply_ai(self, context: NoteBuilderContext) -> NoteBuilderContext:

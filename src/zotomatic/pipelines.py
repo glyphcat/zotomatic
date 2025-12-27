@@ -102,6 +102,13 @@ def run_ready(cli_options: Mapping[str, Any] | None = None):
                 citekey
             )
             if existing:
+                if note_workflow.update_pdf_path_if_changed(
+                    NoteWorkflowContext(
+                        builder_context=context,
+                        existing_path=existing,
+                    )
+                ):
+                    return
                 if note_workflow.update_pending_note(
                     NoteWorkflowContext(
                         builder_context=context,

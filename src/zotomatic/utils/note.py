@@ -48,3 +48,39 @@ def extract_summary_block(text: str) -> str:
             break
         summary_lines.append(line.lstrip("> ").rstrip())
     return "\n".join(summary_lines).strip()
+
+
+def update_frontmatter_value(
+    text: str, key: str, value: str
+) -> tuple[str, bool]:
+    if not text.startswith("---"):
+        return text, False
+    lines = text.splitlines()
+    try:
+        end_idx = lines[1:].index("---") + 1
+    except ValueError:
+        return text, False
+
+    target_prefix = f"{key}:"
+    changed = False
+    for idx in range(1, end_idx):
+        line = lines[idx]
+        stripped = line.lstrip()
+        if not stripped.startswith(target_prefix):
+            continue
+        prefix = line[: len(line) - len(stripped)]
+        current = stripped.split(":", 1)[1].strip()
+        if current == value:
+            return text, False
+        lines[idx] = f"{prefix}{key}: {value}"
+        changed = True
+        break
+
+    if not changed:
+        lines.insert(end_idx, f"{key}: {value}")
+        changed = True
+
+    updated = "\n".join(lines)
+    if text.endswith("\n"):
+        updated += "\n"
+    return updated, True
