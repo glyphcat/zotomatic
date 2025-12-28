@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -70,7 +71,19 @@ class WatcherStateRepositoryConfig(SQLiteConfig):
 
     @staticmethod
     def default_path() -> Path:
-        return Path(".zotomatic/db/zotomatic.db")
+        if os.name == "nt":
+            base = os.environ.get("LOCALAPPDATA") or os.environ.get("APPDATA")
+            if base:
+                return Path(base) / "Zotomatic" / "db" / "zotomatic.db"
+            return (
+                Path.home()
+                / "AppData"
+                / "Local"
+                / "Zotomatic"
+                / "db"
+                / "zotomatic.db"
+            )
+        return Path("~/.zotomatic/db/zotomatic.db").expanduser()
 
 
 @dataclass(frozen=True, slots=True)

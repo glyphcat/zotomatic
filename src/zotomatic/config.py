@@ -15,13 +15,32 @@ except ModuleNotFoundError:  # pragma: no cover - fallback for <3.11
     tomllib = None  # type: ignore[assignment]
 
 _ENV_PREFIX = "ZOTOMATIC_"
-_DEFAULT_CONFIG = Path("~/.zotomatic/config.toml").expanduser()
 _TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
-_DEFAULT_TEMPLATE_PATH = "~/Zotomatic/templates/note.md"
+
+
+def _default_config_path() -> Path:
+    if os.name == "nt":
+        base = os.environ.get("LOCALAPPDATA") or os.environ.get("APPDATA")
+        if base:
+            return Path(base) / "Zotomatic" / "config.toml"
+        return Path.home() / "AppData" / "Local" / "Zotomatic" / "config.toml"
+    return Path("~/.zotomatic/config.toml").expanduser()
+
+
+def _default_notes_dir() -> str:
+    return str(Path.home() / "Zotomatic" / "notes")
+
+
+def _default_template_path() -> str:
+    return str(Path.home() / "Zotomatic" / "templates" / "note.md")
+
+
+_DEFAULT_CONFIG = _default_config_path()
+_DEFAULT_TEMPLATE_PATH = _default_template_path()
 
 
 _DEFAULT_SETTINGS: dict[str, Any] = {
-    "note_dir": "~/Zotomatic/notes",
+    "note_dir": _default_notes_dir(),
     "pdf_dir": "~/Zotero/storage",
     "pdf_alias_prefix": "zotero:/storage",
     "llm_provider": "openai",

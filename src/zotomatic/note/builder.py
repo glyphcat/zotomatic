@@ -178,7 +178,7 @@ class NoteBuilder:
         if not rendered:
             rendered = prepared_context.get("slug80", "note") or "note"
 
-        candidate = Path(rendered)
+        candidate = _sanitize_relative_path(rendered)
         if candidate.suffix:
             return candidate
         return candidate.with_suffix(".md")
@@ -202,6 +202,14 @@ def _render_filename_pattern(pattern: str, context: dict[str, Any]) -> str:
         return str(context.get(key, ""))
 
     return _FILENAME_TOKEN.sub(replacer, pattern)
+
+
+def _sanitize_relative_path(value: str) -> Path:
+    parts = [p for p in re.split(r"[\\\\/]+", value) if p and p not in {".", ".."}]
+    if not parts:
+        return Path(slug.sanitize_filename("note"))
+    safe_parts = [slug.sanitize_filename(part) for part in parts]
+    return Path(*safe_parts)
 
 
 def _normalize_tag_value(value: str) -> str:

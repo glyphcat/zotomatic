@@ -6,6 +6,15 @@ import re
 import unicodedata
 
 _SLUG_REGEX = re.compile(r"[^a-z0-9]+")
+_INVALID_FILENAME_CHARS = re.compile(r'[<>:"/\\\\|?*\\x00-\\x1F]')
+_WINDOWS_RESERVED = {
+    "CON",
+    "PRN",
+    "AUX",
+    "NUL",
+    *(f"COM{i}" for i in range(1, 10)),
+    *(f"LPT{i}" for i in range(1, 10)),
+}
 
 
 def slugify(value: str, max_length: int | None = None) -> str:
@@ -16,3 +25,18 @@ def slugify(value: str, max_length: int | None = None) -> str:
     if max_length is not None and max_length > 0:
         slug = slug[:max_length]
     return slug or "note"
+
+
+def sanitize_filename(value: str, fallback: str = "note") -> str:
+    """Sanitize a filename for Windows-compatible filesystems."""
+    name = (value or "").strip()
+    if not name:
+        return fallback
+    name = _INVALID_FILENAME_CHARS.sub("-", name)
+    name = name.rstrip(" .")
+    if not name or name in {".", ".."}:
+        return fallback
+    stem = name.rsplit(".", 1)[0] if "." in name else name
+    if stem.upper() in _WINDOWS_RESERVED:
+        name = f"{name}_"
+    return name or fallback
