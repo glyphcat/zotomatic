@@ -79,7 +79,7 @@ def _build_default_config_template(settings: Mapping[str, Any]) -> str:
         [
             "# Zotomatic configuration",
             "#",
-            "# Update llm_openai_api_key (or export OPENAI_API_KEY / ZOTOMATIC_LLM_API_KEY) before running `zotomatic ready`.",
+            "# Update llm_openai_api_key (or export ZOTOMATIC_LLM_OPENAI_API_KEY) before running `zotomatic ready`.",
             "",
             "# Paths & watcher",
             f"note_dir = {_render_value(settings['note_dir'])}",
@@ -107,23 +107,6 @@ def _build_default_config_template(settings: Mapping[str, Any]) -> str:
             "",
         ]
     )
-
-_ENV_ALIASES = {
-    "OPENAI_API_KEY": "llm_openai_api_key",
-    "ZOTOMATIC_AI_API_KEY": "llm_openai_api_key",
-    "OPENAI_MAX_INPUT_CHARS": "llm_max_input_chars",
-    "ZOTOMATIC_AI_MAX_INPUT_CHARS": "llm_max_input_chars",
-    "OPENAI_MAX_RUNS_PER_DAY": "llm_daily_limit",
-    "ZOTOMATIC_AI_MAX_RUNS_PER_DAY": "llm_daily_limit",
-    "ZOTERO_API_KEY": "zotero_api_token",
-    "ZOTERO_API_TOKEN": "zotero_api_token",
-    "ZOTERO_LIBRARY_ID": "zotero_library_id",
-    "ZOTERO_LIBRARY_TYPE": "zotero_library_scope",
-    "PDF_ROOT": "pdf_dir",
-    "OUTPUT_DIR": "note_dir",
-    "NOTE_TITLE_TEMPLATE": "note_title_pattern",
-    "LLM_OUTPUT_LANGUAGE": "llm_output_language",
-}
 
 # TODO: legacy keyは不要なので削除する
 def _coerce_env_value(key: str, value: str) -> Any:
@@ -191,10 +174,6 @@ def _load_file_config(path: Path) -> dict[str, Any]:
 def _load_env_config() -> dict[str, Any]:
     config: dict[str, Any] = {}
     for env_key, raw_value in os.environ.items():
-        if env_key in _ENV_ALIASES:
-            key = _ENV_ALIASES[env_key]
-            config[key] = _coerce_env_value(key, raw_value)
-            continue
         if env_key.startswith(_ENV_PREFIX):
             normalized = env_key[len(_ENV_PREFIX) :].lower()
             config[normalized] = _coerce_env_value(normalized, raw_value)
