@@ -1,4 +1,14 @@
 ---
+# Required keys (do not remove):
+# - citekey
+# - pdf_local
+# - zotomatic_summary_status
+# - zotomatic_tag_status
+# - zotomatic_summary_mode
+# - tags
+#
+# Keys not listed above are optional and safe to edit/remove.
+# Keep template variables like {title}; removing them leaves blanks.
 type: paper
 title: "{title}"
 citekey: {citekey}
