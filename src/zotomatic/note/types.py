@@ -71,7 +71,6 @@ class NoteBuilderContext:
     generated_tags: tuple[str, ...] = ()
     abstract: str = ""
     generated_summary: str = ""
-    key_points: str = "-"
     highlights: str = ""
     zotomatic_summary_status: str = "pending"
     zotomatic_tag_status: str = "pending"

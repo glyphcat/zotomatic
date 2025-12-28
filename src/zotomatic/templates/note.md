@@ -35,10 +35,10 @@ zotomatic_last_updated: {zotomatic_last_updated}
 > {generated_summary}
 
 ## Abstract
-{abstract}
-
-## Key Points
-{key_points}
+{zotero_abstract}
 
 ## Highlights / Notes
-{highlights}
+{zotero_highlights}
+
+## Key Points
+
