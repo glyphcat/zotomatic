@@ -57,8 +57,6 @@ _DEFAULT_SETTINGS: dict[str, Any] = {
     "zotero_library_scope": "user",
     "note_title_pattern": "{{ year }}-{{ slug80 }}-{{ citekey }}",
     "note_template_path": _DEFAULT_TEMPLATE_PATH,
-    "heading_summary": "AI-generated Summary",
-    "heading_abstract": "Abstract",
 }
 
 
