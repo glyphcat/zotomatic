@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
 import re
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -15,26 +15,6 @@ except ModuleNotFoundError:  # pragma: no cover - fallback for <3.11
 
 _ENV_PREFIX = "ZOTOMATIC_"
 _DEFAULT_CONFIG = Path("~/.zotomatic/config.toml").expanduser()
-
-# TODO: 設定キーの整理
-"""
-- note_dir: mdファイルの出力先。必要
-- pdf_dir: PDFファイルの格納先。ファイル保存の監視先。必要
-- pdf_alias_prefix: gitでのコミット管理時に自分が設定したマスクに使う文字列。不要
-- llm_provider: 今後の拡張用で、今は使用していない。あってもいい。必須ではない
-- llm_openai_model: LLMモデル名。必須？ChatGPTのみに限定するなら必須ではない
-- llm_tag_enabled: AI生成のtagを埋め込みするか？必要？ -> LLM利用は有料だったりするため必要とする,
-- llm_summary_enabled: AI生成の要約を埋め込みするか？必要？ -> LLM利用は有料だったりするため必要とする,
-- llm_openai_api_key: LLMのAPIキー。必須,
-- llm_max_input_chars: 14000 必須じゃないが設定値としてはOKとする,
-- llm_daily_limit: 1日の利用制限。これはタグ生成とくっつけるべきかもしれない。あった方がいい,
-- zotero_api_key: zoteroのAPIキーで必須,
-- zotero_library_id: zoteroのライブラリID。ユーザのものを使うなら空文字でOK. 必須ではない,
-- zotero_library_scope: "user" or "group". 必須ではない,
-- note_title_pattern: 生成されるnoteのタイトル。デフォルトを設けておく。ユーザー設定は必須ではない,
-
-"""
-
 _TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
 _DEFAULT_TEMPLATE_PATH = "~/Zotomatic/templates/note.md"
 
@@ -51,7 +31,7 @@ _DEFAULT_SETTINGS: dict[str, Any] = {
     "llm_tag_enabled": True,
     "llm_summary_enabled": True,
     "llm_openai_api_key": "",
-    "llm_max_input_chars": 14000,
+    "llm_input_char_limit": 14000,
     "llm_daily_limit": 50,
     "tag_generation_limit": 8,
     "zotero_api_key": "",
@@ -99,7 +79,7 @@ def _build_default_config_template(settings: Mapping[str, Any]) -> str:
             f"llm_summary_enabled = {_render_value(settings['llm_summary_enabled'])}",
             f"llm_tag_enabled = {_render_value(settings['llm_tag_enabled'])}",
             f"llm_summary_mode = {_render_value(settings['llm_summary_mode'])}",
-            f"llm_max_input_chars = {_render_value(settings['llm_max_input_chars'])}",
+            f"llm_input_char_limit = {_render_value(settings['llm_input_char_limit'])}",
             f"llm_daily_limit = {_render_value(settings['llm_daily_limit'])}",
             "",
             "# Tagging",
@@ -108,13 +88,10 @@ def _build_default_config_template(settings: Mapping[str, Any]) -> str:
         ]
     )
 
-# TODO: legacy keyは不要なので削除する
+
 def _coerce_env_value(key: str, value: str) -> Any:
     target_key = key
     default = _DEFAULT_SETTINGS.get(target_key)
-    # if default is None and key in _LEGACY_KEY_ALIASES:
-    #     target_key = _LEGACY_KEY_ALIASES[key]
-    #     default = _DEFAULT_SETTINGS.get(target_key)
     if isinstance(default, bool):
         return value.strip().lower() in {"1", "true", "yes", "on"}
     if isinstance(default, int):
@@ -202,6 +179,7 @@ def get_config(cli_options: Mapping[str, Any] | None = None) -> dict[str, Any]:
         "llm_provider",
         "llm_openai_model",
         "llm_openai_base_url",
+        "llm_input_char_limit",
     ):
         merged[key] = _DEFAULT_SETTINGS[key]
 
@@ -262,9 +240,7 @@ def initialize_config(cli_options: Mapping[str, Any] | None = None) -> InitResul
         template_path.parent.mkdir(parents=True, exist_ok=True)
         source_template = _TEMPLATES_DIR / "note.md"
         if not source_template.is_file():
-            raise FileNotFoundError(
-                f"Default template not found: {source_template}"
-            )
+            raise FileNotFoundError(f"Default template not found: {source_template}")
         template_path.write_text(
             source_template.read_text(encoding="utf-8"),
             encoding="utf-8",
