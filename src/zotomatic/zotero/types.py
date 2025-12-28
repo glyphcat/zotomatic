@@ -47,5 +47,5 @@ class ZoteroClientConfig:
         return cls(
             library_id=str(settings.get("zotero_library_id") or ""),
             library_type=str(settings.get("zotero_library_scope") or "user"),
-            api_key=str(settings.get("zotero_api_token") or ""),
+            api_key=str(settings.get("zotero_api_key") or ""),
         )

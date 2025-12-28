@@ -399,12 +399,12 @@ def run_doctor(cli_options: Mapping[str, Any] | None = None):
     else:
         _warn("Zotero", "Unable to determine whether Zotero app is running")
 
-    zotero_token = str(settings.get("zotero_api_token") or "").strip()
+    zotero_token = str(settings.get("zotero_api_key") or "").strip()
     zotero_library_id = str(settings.get("zotero_library_id") or "").strip()
     zotero_library_scope = str(settings.get("zotero_library_scope") or "user").strip()
 
     if not zotero_token:
-        _warn("Zotero", "zotero_api_token is not set; Zotero integration disabled")
+        _warn("Zotero", "zotero_api_key is not set; Zotero integration disabled")
     else:
         if not zotero_library_id:
             _warn("Zotero", "zotero_library_id is empty; defaulting to user library")
