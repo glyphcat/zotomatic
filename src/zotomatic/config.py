@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -196,18 +197,31 @@ def get_config(cli_options: Mapping[str, Any] | None = None) -> dict[str, Any]:
     return merged
 
 
-def initialize_config(cli_options: Mapping[str, Any] | None = None) -> Path:
+@dataclass(slots=True)
+class InitResult:
+    config_path: Path
+    config_created: bool
+    config_updated_keys: list[str]
+    template_path: Path
+    template_created: bool
+
+
+def initialize_config(cli_options: Mapping[str, Any] | None = None) -> InitResult:
     config_path = _resolve_config_path(cli_options)
     config_path.parent.mkdir(parents=True, exist_ok=True)
 
+    config_created = False
+    config_updated_keys: list[str] = []
     if not config_path.exists():
         config_path.write_text(_DEFAULT_CONFIG_TEMPLATE, encoding="utf-8")
+        config_created = True
     else:
         existing_content = config_path.read_text(encoding="utf-8")
         missing_keys = [
             key for key in _DEFAULT_SETTINGS if f"{key} =" not in existing_content
         ]
         if missing_keys:
+            config_updated_keys = list(missing_keys)
             with config_path.open("a", encoding="utf-8") as handle:
                 handle.write(
                     "\n# Added by zotomatic init to ensure required defaults.\n"
@@ -224,6 +238,7 @@ def initialize_config(cli_options: Mapping[str, Any] | None = None) -> Path:
         template_path_value = _DEFAULT_SETTINGS["note_template_path"]
 
     template_path = Path(str(template_path_value)).expanduser()
+    template_created = False
     if not template_path.exists():
         template_path.parent.mkdir(parents=True, exist_ok=True)
         source_template = _TEMPLATES_DIR / "note.md"
@@ -235,5 +250,12 @@ def initialize_config(cli_options: Mapping[str, Any] | None = None) -> Path:
             source_template.read_text(encoding="utf-8"),
             encoding="utf-8",
         )
+        template_created = True
 
-    return config_path.resolve()
+    return InitResult(
+        config_path=config_path.resolve(),
+        config_created=config_created,
+        config_updated_keys=config_updated_keys,
+        template_path=template_path.resolve(),
+        template_created=template_created,
+    )

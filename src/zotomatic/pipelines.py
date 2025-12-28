@@ -17,7 +17,11 @@ from zotomatic.note import (
     NoteWorkflowContext,
     NoteWorkflow,
 )
-from zotomatic.repositories import NoteRepository, PDFRepository
+from zotomatic.repositories import (
+    NoteRepository,
+    PDFRepository,
+    WatcherStateRepositoryConfig,
+)
 from zotomatic.repositories.watcher_state import WatcherStateRepository
 from zotomatic.services import (
     PendingQueue,
@@ -217,9 +221,39 @@ def run_ready(cli_options: Mapping[str, Any] | None = None):
 
 def run_init(cli_options: Mapping[str, Any] | None = None):
     """Init command."""
-    config_path = config.initialize_config()
     logger = get_logger("zotomatic.init", False)
-    logger.info("Config initialized at %s", config_path)
+    init_result = config.initialize_config(cli_options)
+    settings = config.get_config(cli_options)
+
+    if init_result.config_created:
+        logger.info("Config created at %s", init_result.config_path)
+    elif init_result.config_updated_keys:
+        logger.info(
+            "Config updated at %s (added: %s)",
+            init_result.config_path,
+            ", ".join(init_result.config_updated_keys),
+        )
+    else:
+        logger.info("Config already exists at %s", init_result.config_path)
+
+    if init_result.template_created:
+        logger.info("Template created at %s", init_result.template_path)
+    else:
+        logger.info("Template already exists at %s", init_result.template_path)
+
+    db_config = WatcherStateRepositoryConfig.from_settings(settings)
+    db_path = db_config.sqlite_path.expanduser()
+    db_exists = db_path.exists()
+    try:
+        _ = WatcherStateRepository.from_settings(settings)
+    except Exception as exc:  # pragma: no cover - sqlite/filesystem dependent
+        logger.error("Failed to initialize DB at %s: %s", db_path, exc)
+        return
+
+    if db_exists:
+        logger.info("DB already exists at %s", db_path)
+    else:
+        logger.info("DB initialized at %s", db_path)
 
 
 def stub_run_backfill(cli_options: Mapping[str, Any] | None = None): ...
