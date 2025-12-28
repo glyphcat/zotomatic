@@ -29,12 +29,7 @@ _DEFAULT_CONFIG = Path("~/.zotomatic/config.toml").expanduser()
 - zotero_api_token: zoteroのAPIキーで必須,
 - zotero_library_id: zoteroのライブラリID。ユーザのものを使うなら空文字でOK. 必須ではない,
 - zotero_library_scope: "user" or "group". 必須ではない,
-- obsidian_notes_dir: notes_output_dirにまとめた方がいい。多分不要,
 - note_title_pattern: 生成されるnoteのタイトル。デフォルトを設けておく。ユーザー設定は必須ではない,
-- obsidian_autotag_enabled: これはなんだ？いらないと思う,
-- obsidian_autotag_limit: タグの上限値。キーとしては用意しておく。ユーザー設定は必須にしない,
-- logs_dir: ログ出力先。ユーザー設定をさせる必要があるかわからない。必須項目ではない,
-- summary_runs_log: 要約に限らずLLM利用の回数制限をカウントするログファイル。これは別に設定値としては不要のためconfigからは削除する,
 
 """
 
@@ -50,27 +45,12 @@ _DEFAULT_SETTINGS: dict[str, Any] = {
     "llm_base_url": "https://api.openai.com/v1",
     "llm_output_language": "ja",
     "llm_summary_mode": "quick",
-    "summary_prompt_quick": (
-        "Summarize the paper in three concise Markdown bullet points covering motivation, method, and takeaway.\n"
-        "Each bullet must stay under 120 characters."
-    ),
-    "summary_prompt_standard": (
-        "Write an Obsidian-ready summary with sections: Context, Methods, Findings, Limitations, Next Steps.\n"
-        "Keep each section to 2-3 short bullet points."
-    ),
-    "summary_prompt_detailed": (
-        "Create a detailed study note with headings (Overview, Methodology, Results, Implications, Quotes).\n"
-        "Include short bullet points, cite quantitative values, and mention open questions for further review."
-    ),
-    "tagging_prompt": (
-        "Suggest up to {obsidian_autotag_limit} topical Obsidian tags in #kebab-case based on the paper's themes, methods, and domain.\n"
-        "Return a single line of space-separated tags (e.g., #nlp #transformers #evaluation)."
-    ),
     "llm_tag_enabled": True,
     "llm_summary_enabled": True,
     "llm_api_key": "",
     "llm_max_input_chars": 14000,
     "summary_daily_quota": 50,
+    "tag_generation_limit": 8,
     "zotero_api_token": "",
     "zotero_library_id": "",
     "zotero_library_scope": "user",
@@ -80,13 +60,8 @@ _DEFAULT_SETTINGS: dict[str, Any] = {
     "pending_loop_interval_seconds": 3,
     "pending_max_attempts": 10,
     "pending_logger_name": "zotomatic.pending",
-    "obsidian_notes_dir": "literature",
     "note_title_pattern": "{{ year }}-{{ slug80 }}-{{ citekey }}",
     "note_template_path": str(_TEMPLATES_DIR / "default.md"),
-    "obsidian_autotag_enabled": True,
-    "obsidian_autotag_limit": 8,
-    "logs_dir": "~/Zotomatic/logs",
-    "summary_runs_log": "summarizer_runs_log.json",
     "heading_summary": "AI-generated Summary",
     "heading_abstract": "Abstract",
 }
@@ -129,10 +104,7 @@ _DEFAULT_CONFIG_TEMPLATE = "\n".join(
         f"pending_logger_name = {_render_value(_DEFAULT_SETTINGS['pending_logger_name'])}",
         "",
         "# Obsidian notes",
-        f"obsidian_notes_dir = {_render_value(_DEFAULT_SETTINGS['obsidian_notes_dir'])}",
         f"note_title_pattern = {_render_value(_DEFAULT_SETTINGS['note_title_pattern'])}",
-        f"obsidian_autotag_enabled = {_render_value(_DEFAULT_SETTINGS['obsidian_autotag_enabled'])}",
-        f"obsidian_autotag_limit = {_render_value(_DEFAULT_SETTINGS['obsidian_autotag_limit'])}",
         "",
         "# AI integration",
         f"llm_provider = {_render_value(_DEFAULT_SETTINGS['llm_provider'])}",
@@ -144,15 +116,8 @@ _DEFAULT_CONFIG_TEMPLATE = "\n".join(
         f"llm_max_input_chars = {_render_value(_DEFAULT_SETTINGS['llm_max_input_chars'])}",
         f"summary_daily_quota = {_render_value(_DEFAULT_SETTINGS['summary_daily_quota'])}",
         "",
-        "# AI prompts",
-        f"summary_prompt_quick = {_render_value(_DEFAULT_SETTINGS['summary_prompt_quick'])}",
-        f"summary_prompt_standard = {_render_value(_DEFAULT_SETTINGS['summary_prompt_standard'])}",
-        f"summary_prompt_detailed = {_render_value(_DEFAULT_SETTINGS['summary_prompt_detailed'])}",
-        f"tagging_prompt = {_render_value(_DEFAULT_SETTINGS['tagging_prompt'])}",
-        "",
-        "# Logging",
-        f"logs_dir = {_render_value(_DEFAULT_SETTINGS['logs_dir'])}",
-        f"summary_runs_log = {_render_value(_DEFAULT_SETTINGS['summary_runs_log'])}",
+        "# Tagging",
+        f"tag_generation_limit = {_render_value(_DEFAULT_SETTINGS['tag_generation_limit'])}",
         "",
     ]
 )
@@ -166,17 +131,6 @@ _ENV_ALIASES = {
     "ZOTOMATIC_AI_MAX_INPUT_CHARS": "llm_max_input_chars",
     "OPENAI_MAX_RUNS_PER_DAY": "summary_daily_quota",
     "ZOTOMATIC_AI_MAX_RUNS_PER_DAY": "summary_daily_quota",
-    "OPENAI_PROMPT_TEMPLATE": "summary_prompt_standard",
-    "ZOTOMATIC_AI_PROMPT_TEMPLATE": "summary_prompt_standard",
-    "AI_PROMPT_TEMPLATE": "summary_prompt_standard",
-    "AI_PROMPT_SUMMARY_QUICK": "summary_prompt_quick",
-    "AI_PROMPT_SUMMARY_STANDARD": "summary_prompt_standard",
-    "AI_PROMPT_SUMMARY_DETAILED": "summary_prompt_detailed",
-    "AI_PROMPT_TAGS": "tagging_prompt",
-    "OPENAI_PROMPT_SUMMARY_QUICK": "summary_prompt_quick",
-    "OPENAI_PROMPT_SUMMARY_STANDARD": "summary_prompt_standard",
-    "OPENAI_PROMPT_SUMMARY_DETAILED": "summary_prompt_detailed",
-    "OPENAI_PROMPT_TAGS": "tagging_prompt",
     "ZOTERO_API_KEY": "zotero_api_token",
     "ZOTERO_API_TOKEN": "zotero_api_token",
     "ZOTERO_LIBRARY_ID": "zotero_library_id",
@@ -184,12 +138,7 @@ _ENV_ALIASES = {
     "PDF_ROOT": "pdf_library_dir",
     "PDF_ALIAS_ROOT": "pdf_alias_prefix",
     "OUTPUT_DIR": "notes_output_dir",
-    "NOTE_DIR": "obsidian_notes_dir",
     "NOTE_TITLE_TEMPLATE": "note_title_pattern",
-    "AUTO_TAGS": "obsidian_autotag_enabled",
-    "AUTO_TAGS_MAX": "obsidian_autotag_limit",
-    "LOG_DIR": "logs_dir",
-    "SUMMARIZER_RUNS_LOG": "summary_runs_log",
     "LLM_BASE_URL": "llm_base_url",
     "LLM_LANGUAGE": "llm_output_language",
     "LLM_OUTPUT_LANGUAGE": "llm_output_language",
@@ -203,11 +152,6 @@ _LEGACY_KEY_ALIASES = {
     "pdf_alias_root": "pdf_alias_prefix",
     "ai_provider": "llm_provider",
     "ai_model": "llm_model",
-    "ai_prompt_template": "summary_prompt_standard",
-    "ai_prompt_summary_quick": "summary_prompt_quick",
-    "ai_prompt_summary_standard": "summary_prompt_standard",
-    "ai_prompt_summary_detailed": "summary_prompt_detailed",
-    "ai_prompt_tags": "tagging_prompt",
     "ai_tagging_enabled": "llm_tag_enabled",
     "ai_summary_enabled": "llm_summary_enabled",
     "ai_api_key": "llm_api_key",
@@ -215,12 +159,7 @@ _LEGACY_KEY_ALIASES = {
     "ai_max_runs_per_day": "summary_daily_quota",
     "zotero_api_key": "zotero_api_token",
     "zotero_library_type": "zotero_library_scope",
-    "note_dir": "obsidian_notes_dir",
     "note_title_template": "note_title_pattern",
-    "auto_tags": "obsidian_autotag_enabled",
-    "auto_tags_max": "obsidian_autotag_limit",
-    "log_dir": "logs_dir",
-    "summarizer_runs_log": "summary_runs_log",
 }
 
 
