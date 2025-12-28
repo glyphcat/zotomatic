@@ -5,8 +5,19 @@ from __future__ import annotations
 from zotomatic.errors import ZotomaticError
 
 _LANGUAGE_DISPLAY_MAP = {
+    "de": "German",
     "en": "English",
+    "es": "Spanish",
+    "fr": "French",
+    "it": "Italian",
     "ja": "Japanese",
+    "ko": "Korean",
+    "nl": "Dutch",
+    "pl": "Polish",
+    "pt": "Portuguese",
+    "ru": "Russian",
+    "sv": "Swedish",
+    "tr": "Turkish",
     "zh": "Chinese",
 }
 _DEFAULT_LANGUAGE_CODE = "en"
