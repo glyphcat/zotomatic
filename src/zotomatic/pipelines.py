@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from pyzotero import zotero
+
 from zotomatic import config
 from zotomatic.llm import create_llm_client
 from zotomatic.logging import get_logger
@@ -43,8 +44,6 @@ def _merge_config(cli_options: Mapping[str, Any] | None) -> dict[str, Any]:
     return config.get_config(cli_options or {})
 
 
-
-
 def run_scan(cli_options: Mapping[str, Any] | None = None):
     """
     Scan command
@@ -55,7 +54,7 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
 
     # repositoryの準備
     note_repository = NoteRepository.from_settings(settings)
-    pdf_repository = PDFRepository.from_settings(settings)
+    # pdf_repository = PDFRepository.from_settings(settings)
     state_repository = WatcherStateRepository.from_settings(settings)
     pending_queue = PendingQueue.from_state_repository(state_repository)
     pending_processor_config = PendingQueueProcessorConfig()
@@ -106,8 +105,6 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
 
     def _process_pdf(pdf_path: Path) -> None:
         pdf_path = Path(pdf_path)
-        _ = pdf_repository  # placeholder for future PDF operations
-
         context = zotero_client.build_context(pdf_path) or NoteBuilderContext(
             title=pdf_path.stem,
             pdf_path=str(pdf_path),
@@ -140,16 +137,6 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
                 )
                 return
 
-        # context = _apply_ai_enrichments(
-        #     base_context,
-        #     llm_client,
-        #     summary_enabled,
-        #     tag_enabled,
-        #     logger,
-        # ).with_updates(
-        #     zotomatic_last_updated=datetime.now(timezone.utc).isoformat(),
-        # )
-
         # ノート生成
         note = note_workflow.create_new_note(
             NoteWorkflowContext(builder_context=context)
@@ -160,7 +147,6 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
         else:
             logger.info("Generated note -> %s", note.path)
 
-    # TODO: 見づらいから外に出す？
     def _on_pdf_created(pdf_path):
         logger.debug("Watcher detected %s", pdf_path)
         pdf_path = Path(pdf_path)
@@ -274,9 +260,6 @@ def run_init(cli_options: Mapping[str, Any] | None = None):
 
 
 def stub_run_backfill(cli_options: Mapping[str, Any] | None = None): ...
-
-
-def stub_run_doctor(cli_options: Mapping[str, Any] | None = None): ...
 
 
 def run_doctor(cli_options: Mapping[str, Any] | None = None):
@@ -420,7 +403,7 @@ def run_doctor(cli_options: Mapping[str, Any] | None = None):
             _warn(
                 "Zotero",
                 "Zotero API connection failed; metadata enrichment disabled "
-                f"({exc})"
+                f"({exc})",
             )
 
     label_map = {"OK": "✅", "WARN": "⚠️", "FAIL": "❌"}
