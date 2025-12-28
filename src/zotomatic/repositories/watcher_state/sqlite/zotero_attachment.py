@@ -5,7 +5,7 @@ from pathlib import Path
 
 from ...types import WatcherStateRepositoryConfig, ZoteroAttachmentState
 from ..repository import ZoteroAttachmentStore
-from .base import SQLiteRepository
+from zotomatic.repositories.sqlite_base import SQLiteRepository
 
 
 class SqliteZoteroAttachmentStore(SQLiteRepository, ZoteroAttachmentStore):

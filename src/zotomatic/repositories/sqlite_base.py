@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
+from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -8,24 +9,30 @@ from typing import Iterator, Mapping
 
 from zotomatic.errors import WatcherStateRepositoryError
 
-from ...types import WatcherStateRepositoryConfig
+
+class SQLiteConfig(ABC):
+    @property
+    @abstractmethod
+    def sqlite_path(self) -> Path: ...
 
 
 @dataclass(slots=True)
 class SQLiteRepository:
     """SQLite接続とスキーマ初期化を共通化する基底クラス。"""
 
-    config: WatcherStateRepositoryConfig
+    config: SQLiteConfig
     _schema_path: Path = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
         self._schema_path = (
-            Path(__file__).resolve().parents[3] / "db" / "schema.sql"
+            Path(__file__).resolve().parent / "db" / "schema.sql"
         )
         self._ensure_initialized()
 
     @classmethod
-    def from_settings(cls, settings: Mapping[str, object]) -> SQLiteRepository:
+    def from_settings(cls, settings: Mapping[str, object]) -> "SQLiteRepository":
+        from .types import WatcherStateRepositoryConfig
+
         return cls(WatcherStateRepositoryConfig.from_settings(settings))
 
     def _ensure_initialized(self) -> None:

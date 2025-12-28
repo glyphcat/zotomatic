@@ -5,7 +5,7 @@ from typing import Mapping
 
 from ..repository import PendingStore
 from ...types import PendingEntry, WatcherStateRepositoryConfig
-from .base import SQLiteRepository
+from zotomatic.repositories.sqlite_base import SQLiteRepository
 
 
 class SqlitePendingStore(SQLiteRepository, PendingStore):

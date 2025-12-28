@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from zotomatic.errors import MissingSettingError
+from zotomatic.repositories.sqlite_base import SQLiteConfig
 
 
 # --- Config. ---
@@ -52,7 +53,7 @@ class PDFRepositoryConfig:
 
 
 @dataclass(frozen=True, slots=True)
-class WatcherStateRepositoryConfig:
+class WatcherStateRepositoryConfig(SQLiteConfig):
     """
     PDFストレージ監視状態の読み書きに必要な設定値を束ねる。
     バックエンドは今の所SQLiteを想定。

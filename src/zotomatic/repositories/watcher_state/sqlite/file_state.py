@@ -5,7 +5,7 @@ from typing import Mapping
 
 from ..repository import FileStateStore
 from ...types import WatcherFileState, WatcherStateRepositoryConfig
-from .base import SQLiteRepository
+from zotomatic.repositories.sqlite_base import SQLiteRepository
 
 
 class SqliteFileStateStore(SQLiteRepository, FileStateStore):

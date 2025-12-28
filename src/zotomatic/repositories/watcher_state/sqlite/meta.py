@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from ..repository import MetaStore
-from .base import SQLiteRepository
+from zotomatic.repositories.sqlite_base import SQLiteRepository
 from ...types import WatcherStateRepositoryConfig
 
 
