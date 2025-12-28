@@ -40,6 +40,7 @@ _DEFAULT_SETTINGS: dict[str, Any] = {
     "zotero_library_scope": "user",
     "note_title_pattern": "{{ year }}-{{ slug80 }}-{{ citekey }}",
     "template_path": _DEFAULT_TEMPLATE_PATH,
+    "watch_verbose_logging": False,
 }
 
 
@@ -181,6 +182,7 @@ def get_config(cli_options: Mapping[str, Any] | None = None) -> dict[str, Any]:
         "llm_openai_model",
         "llm_openai_base_url",
         "llm_input_char_limit",
+        "watch_verbose_logging",
     ):
         merged[key] = _DEFAULT_SETTINGS[key]
 
@@ -242,7 +244,8 @@ def initialize_config(cli_options: Mapping[str, Any] | None = None) -> InitResul
         source_template = _TEMPLATES_DIR / "note.md"
         if not source_template.is_file():
             raise ZotomaticConfigError(
-                f"Default template not found: {source_template}"
+                f"Default template not found: {source_template}",
+                hint="Reinstall Zotomatic or restore the default template file.",
             )
         template_path.write_text(
             source_template.read_text(encoding="utf-8"),

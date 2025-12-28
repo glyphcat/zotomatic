@@ -5,6 +5,10 @@ from __future__ import annotations
 class ZotomaticError(Exception):
     """Base exception for all zotomatic errors."""
 
+    def __init__(self, message: str, hint: str | None = None) -> None:
+        super().__init__(message)
+        self.hint = hint
+
 
 class ZotomaticConfigError(ZotomaticError):
     """Raised when config is missing or invalid."""
@@ -13,9 +17,18 @@ class ZotomaticConfigError(ZotomaticError):
 class ZotomaticMissingSettingError(ZotomaticConfigError):
     """Raised when a required configuration value is absent."""
 
-    def __init__(self, setting_name: str, message: str | None = None) -> None:
+    def __init__(
+        self,
+        setting_name: str,
+        message: str | None = None,
+        hint: str | None = None,
+    ) -> None:
         detail = message or f"Missing required setting: {setting_name}"
-        super().__init__(detail)
+        hint = hint or (
+            f"Set `{setting_name}` in ~/.zotomatic/config.toml or export "
+            f"ZOTOMATIC_{setting_name.upper()}."
+        )
+        super().__init__(detail, hint=hint)
         self.setting_name = setting_name
 
 

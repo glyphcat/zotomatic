@@ -31,7 +31,11 @@ class LLMClientConfig:
         api_key = str(settings.get("llm_openai_api_key") or "").strip()
         if not api_key:
             raise ZotomaticLLMConfigError(
-                "`llm_openai_api_key` must be configured before using the LLM client."
+                "`llm_openai_api_key` must be configured before using the LLM client.",
+                hint=(
+                    "Set `llm_openai_api_key` in ~/.zotomatic/config.toml or export "
+                    "ZOTOMATIC_LLM_OPENAI_API_KEY."
+                ),
             )
 
         base_url = str(

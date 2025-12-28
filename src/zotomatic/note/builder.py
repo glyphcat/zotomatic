@@ -26,7 +26,11 @@ class NoteBuilder:
         self._repository = repository
         if config is None:
             raise ZotomaticNoteBuilderError(
-                "NoteBuilderConfig must be provided for NoteBuilder."
+                "NoteBuilderConfig must be provided for NoteBuilder.",
+                hint=(
+                    "Ensure `template_path` and `note_title_pattern` are set in "
+                    "~/.zotomatic/config.toml."
+                ),
             )
         self._config = config
         self._template_cache: str | None = None

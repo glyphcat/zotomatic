@@ -54,7 +54,8 @@ class NoteWorkflow:
         existing = context.existing_path
         if existing is None:
             raise ZotomaticNoteWorkflowError(
-                "existing_path is required for pending updates."
+                "existing_path is required for pending updates.",
+                hint="Call update_pending_note with an existing note path.",
             )
         try:
             text = existing.read_text(encoding=self._note_repository.config.encoding)
@@ -98,7 +99,8 @@ class NoteWorkflow:
         existing = context.existing_path
         if existing is None:
             raise ZotomaticNoteWorkflowError(
-                "existing_path is required for pdf_local updates."
+                "existing_path is required for pdf_local updates.",
+                hint="Call update_pdf_path_if_changed with an existing note path.",
             )
         try:
             text = existing.read_text(encoding=self._note_repository.config.encoding)

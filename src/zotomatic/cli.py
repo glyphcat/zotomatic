@@ -8,7 +8,7 @@ from collections.abc import Sequence
 from typing import Any
 
 from zotomatic import pipelines
-from zotomatic.errors import ZotomaticCLIError
+from zotomatic.errors import ZotomaticCLIError, ZotomaticError
 
 from . import api
 
@@ -147,20 +147,27 @@ def main(argv: Sequence[str] | None = None) -> None:
     command = args.command
     cli_options = _normalize_cli_options(args)
 
-    if command == "template":
-        template_command = args.template_command
-        if template_command == "create":
-            pipelines.run_template_create(cli_options)
-        elif template_command == "set":
-            pipelines.run_template_set(cli_options)
-        else:  # pragma: no cover - argparse enforces choices
-            raise ZotomaticCLIError(
-                f"Unknown template command: {template_command}"
-            )
-        return
+    try:
+        if command == "template":
+            template_command = args.template_command
+            if template_command == "create":
+                pipelines.run_template_create(cli_options)
+            elif template_command == "set":
+                pipelines.run_template_set(cli_options)
+            else:  # pragma: no cover - argparse enforces choices
+                raise ZotomaticCLIError(
+                    f"Unknown template command: {template_command}"
+                )
+            return
 
-    handler = handlers[command]
-    handler(cli_options)
+        handler = handlers[command]
+        handler(cli_options)
+    except ZotomaticError as exc:
+        print(f"zotomatic: error: {exc}", file=sys.stderr)
+        hint = getattr(exc, "hint", None)
+        if hint:
+            print(f"zotomatic: hint: {hint}", file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == "__main__":  # pragma: no cover
