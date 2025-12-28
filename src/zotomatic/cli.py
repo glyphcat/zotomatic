@@ -69,13 +69,33 @@ def _build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser(
         "init", parents=[shared], help="Initialize a Zotomatic workspace"
     )
+    template = subparsers.add_parser(
+        "template", parents=[shared], help="Manage note templates"
+    )
+    template_subparsers = template.add_subparsers(
+        dest="template_command", required=True
+    )
+    template_create = template_subparsers.add_parser(
+        "create", help="Create a template and update config"
+    )
+    template_create.add_argument(
+        "--path", dest="template_path", required=True, help="Template file path"
+    )
+    template_set = template_subparsers.add_parser(
+        "set", help="Update config to use an existing template"
+    )
+    template_set.add_argument(
+        "--path", dest="template_path", required=True, help="Template file path"
+    )
 
     return parser
 
 
 def _normalize_cli_options(namespace: argparse.Namespace) -> dict[str, Any]:
     cli_options = {
-        key: value for key, value in vars(namespace).items() if key != "command"
+        key: value
+        for key, value in vars(namespace).items()
+        if key not in {"command", "template_command"}
     }
     return {key: value for key, value in cli_options.items() if value is not None}
 
@@ -90,10 +110,21 @@ def main(argv: Sequence[str] | None = None) -> None:
         "backfill": pipelines.stub_run_backfill,
         "doctor": pipelines.stub_run_doctor,
         "init": pipelines.run_init,
+        "template": None,
     }
 
     command = args.command
     cli_options = _normalize_cli_options(args)
+
+    if command == "template":
+        template_command = args.template_command
+        if template_command == "create":
+            pipelines.run_template_create(cli_options)
+        elif template_command == "set":
+            pipelines.run_template_set(cli_options)
+        else:  # pragma: no cover - argparse enforces choices
+            raise ValueError(f"Unknown template command: {template_command}")
+        return
 
     handler = handlers[command]
     handler(cli_options)

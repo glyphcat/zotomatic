@@ -264,3 +264,58 @@ def stub_run_backfill(cli_options: Mapping[str, Any] | None = None): ...
 
 
 def stub_run_doctor(cli_options: Mapping[str, Any] | None = None): ...
+
+
+def run_template_create(cli_options: Mapping[str, Any] | None = None):
+    logger = get_logger("zotomatic.template", False)
+    cli_options = dict(cli_options or {})
+    template_path = cli_options.get("template_path")
+    if not template_path:
+        logger.error("Missing required option: --path")
+        return
+
+    init_result = config.initialize_config(cli_options)
+    updated = config.update_config_value(
+        init_result.config_path, "template_path", template_path
+    )
+
+    template_target = Path(str(template_path)).expanduser()
+    if template_target.exists():
+        logger.info("Template already exists at %s", template_target)
+    else:
+        template_target.parent.mkdir(parents=True, exist_ok=True)
+        source_template = Path(__file__).resolve().parent / "templates" / "note.md"
+        if not source_template.is_file():
+            logger.error("Default template not found: %s", source_template)
+            return
+        template_target.write_text(
+            source_template.read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
+        logger.info("Template created at %s", template_target)
+
+    if updated:
+        logger.info("Config updated: template_path=%s", template_target)
+    else:
+        logger.info("Config already set: template_path=%s", template_target)
+
+
+def run_template_set(cli_options: Mapping[str, Any] | None = None):
+    logger = get_logger("zotomatic.template", False)
+    cli_options = dict(cli_options or {})
+    template_path = cli_options.get("template_path")
+    if not template_path:
+        logger.error("Missing required option: --path")
+        return
+
+    init_result = config.initialize_config(cli_options)
+    updated = config.update_config_value(
+        init_result.config_path, "template_path", template_path
+    )
+    template_target = Path(str(template_path)).expanduser()
+    if not template_target.exists():
+        logger.warning("Template not found at %s", template_target)
+    if updated:
+        logger.info("Config updated: template_path=%s", template_target)
+    else:
+        logger.info("Config already set: template_path=%s", template_target)

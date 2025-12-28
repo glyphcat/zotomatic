@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+import re
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -150,6 +151,32 @@ def _resolve_config_path(cli_options: Mapping[str, Any] | None) -> Path:
     cli_options = dict(cli_options or {})
     raw_config_path = cli_options.get("config_path")
     return Path(raw_config_path).expanduser() if raw_config_path else _DEFAULT_CONFIG
+
+
+def update_config_value(config_path: Path, key: str, value: Any) -> bool:
+    rendered = f"{key} = {_render_value(value)}"
+    if not config_path.exists():
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+        config_path.write_text(rendered + "\n", encoding="utf-8")
+        return True
+
+    text = config_path.read_text(encoding="utf-8")
+    pattern = re.compile(rf"^\s*{re.escape(key)}\s*=")
+    lines = text.splitlines()
+    for idx, line in enumerate(lines):
+        if pattern.match(line):
+            if line.strip() == rendered:
+                return False
+            lines[idx] = rendered
+            updated = "\n".join(lines)
+            if text.endswith("\n"):
+                updated += "\n"
+            config_path.write_text(updated, encoding="utf-8")
+            return True
+
+    updated = text.rstrip("\n") + "\n" + rendered + "\n"
+    config_path.write_text(updated, encoding="utf-8")
+    return True
 
 
 def _load_file_config(path: Path) -> dict[str, Any]:
