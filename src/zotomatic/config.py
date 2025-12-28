@@ -146,23 +146,6 @@ _ENV_ALIASES = {
 }
 
 # TODO: legacy keyは不要なので削除する
-_LEGACY_KEY_ALIASES = {
-    "output_dir": "notes_output_dir",
-    "pdf_root": "pdf_library_dir",
-    "pdf_alias_root": "pdf_alias_prefix",
-    "ai_provider": "llm_provider",
-    "ai_model": "llm_model",
-    "ai_tagging_enabled": "llm_tag_enabled",
-    "ai_summary_enabled": "llm_summary_enabled",
-    "ai_api_key": "llm_api_key",
-    "ai_max_input_chars": "llm_max_input_chars",
-    "ai_max_runs_per_day": "summary_daily_quota",
-    "zotero_api_key": "zotero_api_token",
-    "zotero_library_type": "zotero_library_scope",
-    "note_title_template": "note_title_pattern",
-}
-
-
 def _coerce_env_value(key: str, value: str) -> Any:
     target_key = key
     default = _DEFAULT_SETTINGS.get(target_key)
@@ -182,14 +165,6 @@ def _coerce_env_value(key: str, value: str) -> Any:
         except ValueError:
             return default
     return value
-
-
-def _apply_legacy_aliases(raw: Mapping[str, Any]) -> dict[str, Any]:
-    updated: dict[str, Any] = {}
-    for key, value in raw.items():
-        canonical = _LEGACY_KEY_ALIASES.get(key, key)
-        updated.setdefault(canonical, value)
-    return updated
 
 
 def _resolve_config_path(cli_options: Mapping[str, Any] | None) -> Path:
@@ -224,15 +199,13 @@ def get_config(cli_options: Mapping[str, Any] | None = None) -> dict[str, Any]:
     cli_options = dict(cli_options or {})
     config_path = _resolve_config_path(cli_options)
 
-    file_config = _apply_legacy_aliases(_load_file_config(config_path))
-    env_config = _apply_legacy_aliases(_load_env_config())
-    cli_config = _apply_legacy_aliases(
-        {
-            key: value
-            for key, value in cli_options.items()
-            if value is not None and key != "config_path"
-        }
-    )
+    file_config = _load_file_config(config_path)
+    env_config = _load_env_config()
+    cli_config = {
+        key: value
+        for key, value in cli_options.items()
+        if value is not None and key != "config_path"
+    }
 
     merged: dict[str, Any] = dict(_DEFAULT_SETTINGS)
     merged.update(file_config)
