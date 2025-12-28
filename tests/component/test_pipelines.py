@@ -55,6 +55,8 @@ def test_run_doctor(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         "zotero_library_id": "",
         "zotero_library_scope": "user",
     }
+    config_path = Path(settings["config_path"])
+    config_path.write_text("", encoding="utf-8")
 
     class DummyResult:
         stdout = ""
