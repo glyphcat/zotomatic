@@ -18,12 +18,14 @@ from zotomatic.note import (
     NoteWorkflow,
 )
 from zotomatic.repositories import (
+    LLMUsageRepository,
     NoteRepository,
     PDFRepository,
     WatcherStateRepositoryConfig,
 )
 from zotomatic.repositories.watcher_state import WatcherStateRepository
 from zotomatic.services import (
+    LLMUsageService,
     PendingQueue,
     PendingQueueProcessor,
     PendingQueueProcessorConfig,
@@ -79,6 +81,12 @@ def run_ready(cli_options: Mapping[str, Any] | None = None):
         logger.info("LLM client disabled: %s", exc)
         llm_client = None
 
+    llm_usage = LLMUsageService(
+        repository=LLMUsageRepository.from_settings(settings),
+        daily_limit=settings.get("llm_daily_limit"),
+        logger=logger,
+    )
+
     note_workflow = NoteWorkflow(
         note_builder=note_builder,
         note_repository=note_repository,
@@ -88,6 +96,7 @@ def run_ready(cli_options: Mapping[str, Any] | None = None):
             tag_enabled=tag_enabled,
             summary_mode=summary_mode,
         ),
+        llm_usage=llm_usage,
         logger=logger,
     )
 

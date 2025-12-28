@@ -13,6 +13,7 @@ from zotomatic.note.types import (
 )
 from zotomatic.note.updater import NoteUpdater
 from zotomatic.repositories import NoteRepository
+from zotomatic.services import LLMUsageService
 from zotomatic.utils.note import (
     extract_summary_block,
     parse_frontmatter,
@@ -30,6 +31,7 @@ class NoteWorkflow:
         note_repository: NoteRepository,
         llm_client: BaseLLMClient | None,
         config: NoteWorkflowConfig,
+        llm_usage: LLMUsageService | None = None,
         logger,
     ) -> None:
         self._note_builder = note_builder
@@ -40,6 +42,7 @@ class NoteWorkflow:
         self._summary_mode = config.summary_mode or "quick"
         self._logger = logger
         self._note_updater = NoteUpdater(note_builder=note_builder, logger=logger)
+        self._llm_usage = llm_usage
 
     def create_new_note(self, context: NoteWorkflowContext) -> Note:
         enriched = self._apply_ai(context.builder_context)
@@ -127,6 +130,18 @@ class NoteWorkflow:
         self, context: NoteBuilderContext
     ) -> NoteBuilderContext:
         if self._summary_enabled and self._llm_client:
+            if self._llm_usage and not self._llm_usage.can_run("summary"):
+                used = self._llm_usage.get_total_used()
+                limit = self._llm_usage.daily_limit or 0
+                self._logger.info(
+                    "LLM daily limit reached (used %s/%s); skipping summary generation.",
+                    used,
+                    limit,
+                )
+                return context.with_updates(
+                    zotomatic_summary_status="pending",
+                    zotomatic_summary_mode=self._summary_mode,
+                )
             try:
                 summary_context = LLMSummaryContext.from_note_builder_context(
                     context, mode=self._summary_mode
@@ -134,6 +149,8 @@ class NoteWorkflow:
                 summary_result = self._llm_client.generate_summary(summary_context)
                 summary_text = (summary_result.summary or "").strip()
                 if summary_result and summary_text:
+                    if self._llm_usage:
+                        self._llm_usage.record_success("summary")
                     return context.with_updates(
                         generated_summary=summary_text,
                         zotomatic_summary_status="done",
@@ -158,10 +175,21 @@ class NoteWorkflow:
 
     def _maybe_generate_tags(self, context: NoteBuilderContext) -> NoteBuilderContext:
         if self._tag_enabled and self._llm_client:
+            if self._llm_usage and not self._llm_usage.can_run("tag"):
+                used = self._llm_usage.get_total_used()
+                limit = self._llm_usage.daily_limit or 0
+                self._logger.info(
+                    "LLM daily limit reached (used %s/%s); skipping tag generation.",
+                    used,
+                    limit,
+                )
+                return context.with_updates(zotomatic_tag_status="pending")
             try:
                 tag_context = LLMTagsContext.from_note_builder_context(context)
                 tag_result = self._llm_client.generate_tags(tag_context)
                 if tag_result and tag_result.tags:
+                    if self._llm_usage:
+                        self._llm_usage.record_success("tag")
                     return context.with_updates(
                         generated_tags=tag_result.tags,
                         zotomatic_tag_status="done",
