@@ -69,10 +69,11 @@ class NoteWorkflow:
                 zotomatic_summary_status=summary_status,
                 zotomatic_summary_mode=str(meta.get("zotomatic_summary_mode", "")),
             )
+        tags = parse_tags(str(meta.get("tags", "")))
+        if tags:
+            builder_context = builder_context.with_updates(tags=tags)
         if not tag_should_regen:
-            tags = parse_tags(str(meta.get("tags", "")))
             builder_context = builder_context.with_updates(
-                tags=tags,
                 zotomatic_tag_status=tag_status,
             )
         if summary_should_regen:
