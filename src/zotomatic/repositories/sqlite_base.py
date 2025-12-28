@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterator, Mapping
 
-from zotomatic.errors import WatcherStateRepositoryError
+from zotomatic.errors import ZotomaticWatcherStateRepositoryError
 
 
 class SQLiteConfig(ABC):
@@ -48,7 +48,7 @@ class SQLiteRepository:
 
     def _apply_schema(self, conn: sqlite3.Connection) -> None:
         if not self._schema_path.exists():
-            raise WatcherStateRepositoryError(
+            raise ZotomaticWatcherStateRepositoryError(
                 f"Schema file not found: {self._schema_path}"
             )
         schema_sql = self._schema_path.read_text(encoding="utf-8")
@@ -68,7 +68,7 @@ class SQLiteRepository:
             conn.row_factory = sqlite3.Row
             conn.execute("PRAGMA foreign_keys = ON")
         except sqlite3.Error as exc:
-            raise WatcherStateRepositoryError(
+            raise ZotomaticWatcherStateRepositoryError(
                 f"Failed to open SQLite database: {self.config.sqlite_path}"
             ) from exc
         try:
@@ -76,7 +76,7 @@ class SQLiteRepository:
             conn.commit()
         except sqlite3.Error as exc:
             conn.rollback()
-            raise WatcherStateRepositoryError(
+            raise ZotomaticWatcherStateRepositoryError(
                 f"SQLite operation failed: {self.config.sqlite_path}"
             ) from exc
         finally:

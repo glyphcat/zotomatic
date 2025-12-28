@@ -3,7 +3,10 @@ import unicodedata
 from pathlib import Path
 from typing import Any, Mapping
 
-from zotomatic.errors import NoteRepositoryError
+from zotomatic.errors import (
+    ZotomaticNoteBuilderError,
+    ZotomaticNoteRepositoryError,
+)
 from zotomatic.note.types import Note, NoteBuilderConfig, NoteBuilderContext
 from zotomatic.repositories import NoteRepository
 from zotomatic.utils import slug
@@ -22,7 +25,9 @@ class NoteBuilder:
     ) -> None:
         self._repository = repository
         if config is None:
-            raise ValueError("NoteBuilderConfig must be provided for NoteBuilder.")
+            raise ZotomaticNoteBuilderError(
+                "NoteBuilderConfig must be provided for NoteBuilder."
+            )
         self._config = config
         self._template_cache: str | None = None
 
@@ -69,7 +74,7 @@ class NoteBuilder:
             return template.format(**prepared_context)
         except KeyError as exc:  # pragma: no cover - depends on template edits
             missing_key = exc.args[0]
-            raise NoteRepositoryError(
+            raise ZotomaticNoteRepositoryError(
                 f"Template placeholder '{missing_key}' is missing from context."
             ) from exc
 
@@ -79,7 +84,7 @@ class NoteBuilder:
         try:
             template_text = self._config.template_path.read_text(encoding="utf-8")
         except OSError as exc:  # pragma: no cover - filesystem dependent
-            raise NoteRepositoryError(
+            raise ZotomaticNoteRepositoryError(
                 f"Failed to load note template: {self._config.template_path}"
             ) from exc
         self._template_cache = template_text

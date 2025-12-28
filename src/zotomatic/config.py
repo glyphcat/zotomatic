@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
 
+from zotomatic.errors import ZotomaticConfigError
 try:  # Python >=3.11
     import tomllib  # type: ignore[import-not-found]
 except ModuleNotFoundError:  # pragma: no cover - fallback for <3.11
@@ -240,7 +241,9 @@ def initialize_config(cli_options: Mapping[str, Any] | None = None) -> InitResul
         template_path.parent.mkdir(parents=True, exist_ok=True)
         source_template = _TEMPLATES_DIR / "note.md"
         if not source_template.is_file():
-            raise FileNotFoundError(f"Default template not found: {source_template}")
+            raise ZotomaticConfigError(
+                f"Default template not found: {source_template}"
+            )
         template_path.write_text(
             source_template.read_text(encoding="utf-8"),
             encoding="utf-8",

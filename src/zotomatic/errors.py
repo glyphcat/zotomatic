@@ -1,14 +1,16 @@
 # src/zotomatic/errors.py
 from __future__ import annotations
+
+
 class ZotomaticError(Exception):
     """Base exception for all zotomatic errors."""
 
 
-class ConfigError(ZotomaticError):
+class ZotomaticConfigError(ZotomaticError):
     """Raised when config is missing or invalid."""
 
 
-class MissingSettingError(ConfigError):
+class ZotomaticMissingSettingError(ZotomaticConfigError):
     """Raised when a required configuration value is absent."""
 
     def __init__(self, setting_name: str, message: str | None = None) -> None:
@@ -17,45 +19,69 @@ class MissingSettingError(ConfigError):
         self.setting_name = setting_name
 
 
-class ZoteroError(ZotomaticError):
+class ZotomaticZoteroError(ZotomaticError):
     """Raised when Zotero cannot be accessed."""
 
 
-class NoteGenerationError(ZotomaticError):
+class ZotomaticNoteGenerationError(ZotomaticError):
     """Raised when note creation fails."""
 
 
-class WatcherError(ZotomaticError):
+class ZotomaticNoteBuilderError(ZotomaticNoteGenerationError):
+    """Raised when note building fails."""
+
+
+class ZotomaticNoteWorkflowError(ZotomaticNoteGenerationError):
+    """Raised when note workflow fails."""
+
+
+class ZotomaticWatcherError(ZotomaticError):
     """Raised when the filesystem watcher cannot start or continue running."""
 
 
-class RepositoryError(ZotomaticError):
+class ZotomaticRepositoryError(ZotomaticError):
     """Base error for repository related failures."""
 
 
-class NoteRepositoryError(RepositoryError):
+class ZotomaticNoteRepositoryError(ZotomaticRepositoryError):
     """Raised when note repository cannot complete an operation."""
 
 
-class PDFRepositoryError(RepositoryError):
+class ZotomaticPDFRepositoryError(ZotomaticRepositoryError):
     """Raised when PDF repository cannot complete an operation."""
 
 
-class WatcherStateRepositoryError(RepositoryError):
+class ZotomaticWatcherStateRepositoryError(ZotomaticRepositoryError):
     """Raised when watcher state repository cannot complete an operation."""
 
 
-class LLMClientError(RuntimeError):
+class ZotomaticLLMError(ZotomaticError):
+    """Base error for LLM related failures."""
+
+
+class ZotomaticLLMConfigError(ZotomaticLLMError):
+    """Raised when LLM configuration is missing or invalid."""
+
+
+class ZotomaticLLMClientError(ZotomaticLLMError):
     """Base error for LLM client failures."""
 
 
-class LLMAPIError(LLMClientError):
+class ZotomaticLLMAPIError(ZotomaticLLMClientError):
     """Raised when the HTTP API call fails."""
 
 
-class LLMResponseFormatError(LLMClientError):
+class ZotomaticLLMResponseFormatError(ZotomaticLLMClientError):
     """Raised when the response payload is not in the expected shape."""
 
 
-class UnsupportedProviderError(LLMClientError):
+class ZotomaticLLMUnsupportedProviderError(ZotomaticLLMClientError):
     """Raised when the requested provider is not supported."""
+
+
+class ZotomaticLLMUsageError(ZotomaticLLMError):
+    """Raised when LLM usage tracking is invalid."""
+
+
+class ZotomaticCLIError(ZotomaticError):
+    """Raised when CLI usage is invalid."""

@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
 
-from zotomatic.errors import MissingSettingError
+from zotomatic.errors import ZotomaticMissingSettingError
 from zotomatic.repositories.sqlite_base import SQLiteConfig
 
 
@@ -26,7 +26,7 @@ class NoteRepositoryConfig:
     def from_settings(cls, settings: Mapping[str, Any]) -> NoteRepositoryConfig:
         note_dir = settings.get("note_dir")
         if not note_dir:
-            raise MissingSettingError("note_dir")
+            raise ZotomaticMissingSettingError("note_dir")
         encoding = settings.get("notes_encoding", "utf-8")
         return cls(root_dir=Path(note_dir), encoding=encoding)
 
@@ -46,7 +46,7 @@ class PDFRepositoryConfig:
     def from_settings(cls, settings: Mapping[str, Any]) -> PDFRepositoryConfig:
         pdf_dir = settings.get("pdf_dir")
         if not pdf_dir:
-            raise MissingSettingError("pdf_dir")
+            raise ZotomaticMissingSettingError("pdf_dir")
         recursive = bool(settings.get("pdf_scan_recursive", True))
         pattern = str(settings.get("pdf_glob_pattern", "*.pdf"))
         return cls(library_dir=Path(pdf_dir), recursive=recursive, pattern=pattern)

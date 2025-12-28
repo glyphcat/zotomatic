@@ -8,6 +8,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Literal, Mapping
 
+from zotomatic.errors import ZotomaticLLMConfigError
 from zotomatic.note.types import NoteBuilderContext
 
 ChatRole = Literal["system", "user", "assistant"]
@@ -29,7 +30,7 @@ class LLMClientConfig:
     def from_settings(cls, settings: Mapping[str, object]) -> LLMClientConfig:
         api_key = str(settings.get("llm_openai_api_key") or "").strip()
         if not api_key:
-            raise ValueError(
+            raise ZotomaticLLMConfigError(
                 "`llm_openai_api_key` must be configured before using the LLM client."
             )
 

@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
 
-from zotomatic.errors import WatcherError
+from zotomatic.errors import ZotomaticWatcherError
 from zotomatic.repositories import WatcherStateRepository
 
 _PDF_SUFFIX = ".pdf"
@@ -58,7 +58,7 @@ class WatcherConfig:
     ) -> WatcherConfig:
         watch_dir = settings.get("pdf_dir")
         if not watch_dir:
-            raise WatcherError(
+            raise ZotomaticWatcherError(
                 "`pdf_dir` must be configured before starting the watcher."
             )
         verbose = bool(settings.get("watch_verbose_logging", False))

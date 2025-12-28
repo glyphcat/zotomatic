@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from pathlib import Path
 
+from zotomatic.errors import ZotomaticNoteWorkflowError
 from zotomatic.llm.client import BaseLLMClient
 from zotomatic.llm.types import LLMSummaryContext, LLMTagsContext
 from zotomatic.note.builder import NoteBuilder
@@ -52,7 +53,9 @@ class NoteWorkflow:
     def update_pending_note(self, context: NoteWorkflowContext) -> bool:
         existing = context.existing_path
         if existing is None:
-            raise ValueError("existing_path is required for pending updates.")
+            raise ZotomaticNoteWorkflowError(
+                "existing_path is required for pending updates."
+            )
         try:
             text = existing.read_text(encoding=self._note_repository.config.encoding)
         except OSError:
@@ -94,7 +97,9 @@ class NoteWorkflow:
     def update_pdf_path_if_changed(self, context: NoteWorkflowContext) -> bool:
         existing = context.existing_path
         if existing is None:
-            raise ValueError("existing_path is required for pdf_local updates.")
+            raise ZotomaticNoteWorkflowError(
+                "existing_path is required for pdf_local updates."
+            )
         try:
             text = existing.read_text(encoding=self._note_repository.config.encoding)
         except OSError:

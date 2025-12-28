@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from zotomatic.errors import PDFRepositoryError
+from zotomatic.errors import ZotomaticPDFRepositoryError
 
 from .types import PDFRepositoryConfig
 
@@ -41,9 +41,9 @@ class PDFRepository:
         try:
             return resolved.read_bytes()
         except FileNotFoundError as exc:
-            raise PDFRepositoryError(f"PDF not found: {resolved}") from exc
+            raise ZotomaticPDFRepositoryError(f"PDF not found: {resolved}") from exc
         except OSError as exc:  # pragma: no cover - filesystem dependent
-            raise PDFRepositoryError(f"Failed to read PDF: {resolved}") from exc
+            raise ZotomaticPDFRepositoryError(f"Failed to read PDF: {resolved}") from exc
 
     def list_pdfs(self) -> Iterable[Path]:
         """ライブラリ直下のPDF一覧を返す。存在しない場合は空イテレータ。"""

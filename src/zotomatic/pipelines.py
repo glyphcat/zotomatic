@@ -12,6 +12,7 @@ from typing import Any
 from pyzotero import zotero
 
 from zotomatic import config
+from zotomatic.errors import ZotomaticLLMConfigError
 from zotomatic.llm import create_llm_client
 from zotomatic.logging import get_logger
 from zotomatic.note.builder import NoteBuilder
@@ -84,7 +85,7 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
     logger = get_logger("zotomatic.scan", settings.get("watch_verbose_logging", False))
     try:
         llm_client = create_llm_client(settings)
-    except ValueError as exc:
+    except ZotomaticLLMConfigError as exc:
         logger.info("LLM client disabled: %s", exc)
         llm_client = None
 

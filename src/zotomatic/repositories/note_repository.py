@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from zotomatic.errors import NoteRepositoryError
+from zotomatic.errors import ZotomaticNoteRepositoryError
 
 from .types import NoteRepositoryConfig
 
@@ -38,7 +38,7 @@ class NoteRepository:
         try:
             target.write_text(content, encoding=self.config.encoding)
         except OSError as exc:  # pragma: no cover - filesystem dependent
-            raise NoteRepositoryError(f"Failed to write note: {target}") from exc
+            raise ZotomaticNoteRepositoryError(f"Failed to write note: {target}") from exc
         return target
 
     def exists(self, relative_path: str | Path) -> bool:

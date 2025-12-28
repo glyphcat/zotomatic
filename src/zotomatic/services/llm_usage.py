@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Any
 
+from zotomatic.errors import ZotomaticLLMUsageError
 from zotomatic.repositories import LLMUsageEntry, LLMUsageRepository
 
 
@@ -38,7 +39,7 @@ class LLMUsageService:
             summary_count = entry.summary_count
             tag_count = entry.tag_count + 1
         else:
-            raise ValueError(f"Unknown LLM usage kind: {kind}")
+            raise ZotomaticLLMUsageError(f"Unknown LLM usage kind: {kind}")
         updated = LLMUsageEntry(
             usage_date=entry.usage_date,
             summary_count=summary_count,

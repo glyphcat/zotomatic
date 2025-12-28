@@ -9,7 +9,7 @@ from typing import Any, Mapping
 import httpx
 
 from zotomatic import i18n
-from zotomatic.errors import ZotomaticError
+from zotomatic.errors import ZotomaticLLMClientError
 from zotomatic.llm import prompts
 from zotomatic.logging import get_logger
 from zotomatic.utils import pdf
@@ -203,7 +203,7 @@ class BaseLLMClient(ABC):
     ) -> LLMSummaryResult:
         """Generate summary."""
         if not isinstance(context, LLMSummaryContext):
-            raise TypeError("LLMSummaryContext instance is required")
+            raise ZotomaticLLMClientError("LLMSummaryContext instance is required")
 
         self._logger.debug(
             "Generating summary via %s (mode=%s, citekey=%s)",
@@ -256,7 +256,7 @@ class BaseLLMClient(ABC):
     ) -> LLMTagResult:
         """Generate tags."""
         if not isinstance(context, LLMTagsContext):
-            raise TypeError("LLMTagsContext instance is required")
+            raise ZotomaticLLMClientError("LLMTagsContext instance is required")
 
         self._logger.debug(
             "Generating tags via %s (citekey=%s)",

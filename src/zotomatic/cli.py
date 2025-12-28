@@ -8,6 +8,7 @@ from collections.abc import Sequence
 from typing import Any
 
 from zotomatic import pipelines
+from zotomatic.errors import ZotomaticCLIError
 
 from . import api
 
@@ -153,7 +154,9 @@ def main(argv: Sequence[str] | None = None) -> None:
         elif template_command == "set":
             pipelines.run_template_set(cli_options)
         else:  # pragma: no cover - argparse enforces choices
-            raise ValueError(f"Unknown template command: {template_command}")
+            raise ZotomaticCLIError(
+                f"Unknown template command: {template_command}"
+            )
         return
 
     handler = handlers[command]

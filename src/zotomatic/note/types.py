@@ -4,7 +4,7 @@ from dataclasses import dataclass, fields, replace
 from pathlib import Path
 from typing import Any, Mapping
 
-from zotomatic.errors import MissingSettingError
+from zotomatic.errors import ZotomaticMissingSettingError
 
 
 @dataclass(frozen=True, slots=True)
@@ -24,11 +24,11 @@ class NoteBuilderConfig:
         settings = settings or {}
         template_path = settings.get("template_path")
         if not template_path:
-            raise MissingSettingError("template_path")
+            raise ZotomaticMissingSettingError("template_path")
 
         filename_pattern = settings.get("note_title_pattern")
         if not filename_pattern:
-            raise MissingSettingError("note_title_pattern")
+            raise ZotomaticMissingSettingError("note_title_pattern")
 
         return cls(Path(template_path), filename_pattern)
 
