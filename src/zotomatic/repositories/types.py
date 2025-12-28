@@ -74,6 +74,20 @@ class WatcherStateRepositoryConfig(SQLiteConfig):
 
 
 @dataclass(frozen=True, slots=True)
+class LLMUsageRepositoryConfig(SQLiteConfig):
+    """LLM使用量を保存するリポジトリ設定値。"""
+
+    sqlite_path: Path
+
+    def __post_init__(self) -> None:  # type: ignore[override]
+        object.__setattr__(self, "sqlite_path", Path(self.sqlite_path).expanduser())
+
+    @classmethod
+    def from_settings(cls, settings: Mapping[str, Any]) -> LLMUsageRepositoryConfig:
+        return cls(sqlite_path=WatcherStateRepositoryConfig.default_path())
+
+
+@dataclass(frozen=True, slots=True)
 class WatcherFileState:
     """SQLiteに保存するPDFファイルの監視状態。"""
 
@@ -149,3 +163,13 @@ class ZoteroAttachmentState:
     def __post_init__(self) -> None:  # type: ignore[override]
         if self.file_path is not None:
             object.__setattr__(self, "file_path", Path(self.file_path).expanduser())
+
+
+@dataclass(frozen=True, slots=True)
+class LLMUsageEntry:
+    """日次のLLM使用回数を保存する。"""
+
+    usage_date: str
+    summary_count: int
+    tag_count: int
+    updated_at: int
