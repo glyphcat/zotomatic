@@ -20,7 +20,7 @@ class NoteUpdater:
     def update_existing(self, context: NoteBuilderContext, existing: Path) -> None:
         self._note_builder.generate_note(context=context, relative_path=existing)
         self._logger.info(
-            "Updated note for citekey=%s at %s",
+            "Note updated (citekey=%s): %s",
             context.citekey,
             existing,
         )

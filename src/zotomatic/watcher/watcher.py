@@ -78,7 +78,7 @@ class PDFStorageWatcher:
         self._thread.start()
 
         self._logger.info(
-            "Started PDF watcher on %s (backend=watchfiles)", self._config.watch_dir
+            "PDF watcher started: %s (backend=watchfiles)", self._config.watch_dir
         )
 
     def stop(self, timeout: float | None = None) -> None:
@@ -92,7 +92,7 @@ class PDFStorageWatcher:
         self._thread.join(timeout=timeout)
         self._thread = None
 
-        self._logger.info("Stopped PDF watcher on %s", self._config.watch_dir)
+        self._logger.info("PDF watcher stopped: %s", self._config.watch_dir)
 
     def simulate_pdf_saved(self, pdf_name: str) -> Path:
         """監視を介さずにコールバックを強制実行するテスト用フック"""
@@ -154,7 +154,7 @@ class PDFStorageWatcher:
         except Exception as exc:  # pragma: no cover - depends on watchfiles backend
             self._last_error = exc
             self._logger.exception(
-                "watchfiles loop failed; switching to polling fallback."
+                "Watchfiles loop failed; switching to polling fallback."
             )
             if not self._stop_event.is_set():
                 self._run_with_polling()

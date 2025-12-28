@@ -121,7 +121,7 @@ class NoteWorkflow:
         except OSError:  # pragma: no cover - filesystem dependent
             return False
         self._logger.info(
-            "Updated pdf_local for citekey=%s at %s",
+            "Note updated (pdf_local, citekey=%s): %s",
             context.builder_context.citekey,
             existing,
         )

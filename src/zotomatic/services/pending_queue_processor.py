@@ -40,12 +40,12 @@ class PendingQueueProcessor:
         processed = 0
         due_entries = self._queue.get_due(limit=limit)
         if due_entries:
-            self._logger.info("Pending due entries: %s", len(due_entries))
+            self._logger.info("Pending entries due: %s", len(due_entries))
         if due_entries and not self._zotero_resolver.is_enabled:
             for entry in due_entries:
                 self._drop_permanent(
                     entry.file_path,
-                    "Zotero settings missing (library_id/api_token)",
+                    "Zotero settings missing (library_id/api_key)",
                 )
             return 0
         for entry in due_entries:
@@ -92,7 +92,7 @@ class PendingQueueProcessor:
 
             self._queue.resolve(entry.file_path)
             processed += 1
-            self._logger.info("Pending resolved: %s", entry.file_path)
+            self._logger.info("Pending entry resolved: %s", entry.file_path)
 
         return processed
 
@@ -106,7 +106,7 @@ class PendingQueueProcessor:
         if next_attempt > self._config.max_attempts:
             self._queue.resolve(file_path)
             self._logger.warning(
-                "Pending dropped after max attempts for %s: %s",
+                "Pending entry dropped after max attempts: %s (%s)",
                 file_path,
                 error,
             )
@@ -123,7 +123,7 @@ class PendingQueueProcessor:
             last_error=error,
         )
         self._logger.info(
-            "Pending backoff for %s (attempt=%s, next=%ss): %s",
+            "Pending entry backoff: %s (attempt=%s, next=%ss): %s",
             file_path,
             next_attempt,
             next_delay,
@@ -132,7 +132,7 @@ class PendingQueueProcessor:
 
     def _drop_permanent(self, file_path: str | Path, reason: str) -> None:
         self._queue.resolve(file_path)
-        self._logger.warning("Pending dropped: %s (%s)", file_path, reason)
+        self._logger.warning("Pending entry dropped: %s (%s)", file_path, reason)
 
     def _is_pdf_readable(self, pdf_path: Path) -> bool:
         """PDFファイル破損チェック"""
