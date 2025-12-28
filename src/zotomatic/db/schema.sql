@@ -1,4 +1,4 @@
--- 001_init.sql
+-- Zotomatic watcher state schema (SQLite)
 
 CREATE TABLE IF NOT EXISTS meta (
     key TEXT PRIMARY KEY,
@@ -7,6 +7,13 @@ CREATE TABLE IF NOT EXISTS meta (
 
 INSERT OR IGNORE INTO meta (key, value)
 VALUES ('schema_version', '1');
+
+CREATE TABLE IF NOT EXISTS llm_usage (
+    usage_date TEXT PRIMARY KEY,
+    summary_count INTEGER NOT NULL DEFAULT 0,
+    tag_count INTEGER NOT NULL DEFAULT 0,
+    updated_at INTEGER NOT NULL
+);
 
 CREATE TABLE IF NOT EXISTS files (
     file_path TEXT PRIMARY KEY,
