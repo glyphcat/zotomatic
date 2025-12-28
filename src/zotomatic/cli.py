@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from collections.abc import Sequence
 from typing import Any
 
@@ -29,48 +30,35 @@ except ZotomaticError as e:
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="zotomatic", description="Zotomatic command-line interface"
+        prog="zotomatic",
+        description="Zotomatic command-line interface",
+        add_help=False,
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    shared = argparse.ArgumentParser(add_help=False)
-    shared.add_argument(
-        "--config-path", dest="config_path", help="Override path to config file"
+    subparsers.add_parser("ready", help="Generate the next ready note")
+    subparsers.add_parser("doctor", help="Inspect project health")
+    init = subparsers.add_parser(
+        "init", help="Initialize a Zotomatic workspace"
     )
-    shared.add_argument(
+    init.add_argument(
+        "--pdf-dir",
+        dest="pdf_dir",
+        required=True,
+        help="Directory containing PDF files",
+    )
+    init.add_argument(
         "--note-dir",
         dest="note_dir",
         help="Directory for generated notes",
     )
-    shared.add_argument(
-        "--pdf-dir",
-        dest="pdf_dir",
-        help="Directory containing PDF files",
-    )
-    shared.add_argument(
+    init.add_argument(
         "--template-path",
         dest="template_path",
         help="Path to the note template",
     )
-
-    ready = subparsers.add_parser(
-        "ready", parents=[shared], help="Generate the next ready note"
-    )
-    ready.add_argument(
-        "--note-title", dest="note_title", help="Title for the generated note"
-    )
-    ready.add_argument(
-        "--note-body", dest="note_body", help="Body content for the generated note"
-    )
-
-    subparsers.add_parser("backfill", parents=[shared], help="Process historical items")
-    # TODO: add options for backfill, e.g. limit, since, etc.
-    subparsers.add_parser("doctor", parents=[shared], help="Inspect project health")
-    subparsers.add_parser(
-        "init", parents=[shared], help="Initialize a Zotomatic workspace"
-    )
     template = subparsers.add_parser(
-        "template", parents=[shared], help="Manage note templates"
+        "template", help="Manage note templates"
     )
     template_subparsers = template.add_subparsers(
         dest="template_command", required=True
@@ -91,6 +79,31 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _print_help() -> None:
+    print("Zotomatic command-line interface")
+    print("")
+    print("Usage:")
+    print("  zotomatic <command> [options]")
+    print("")
+    print("Commands:")
+    print("  ready                 Generate the next ready note")
+    print("  doctor                Inspect project health")
+    print("  init                  Initialize a Zotomatic workspace")
+    print("  template create       Create a template and update config")
+    print("  template set          Update config to use an existing template")
+    print("")
+    print("Options:")
+    print("  -h, --help            Show this help message and exit")
+    print("")
+    print("Command options:")
+    print("  init:")
+    print("    --pdf-dir PATH      (required) Directory containing PDF files")
+    print("    --note-dir PATH     Override default note directory")
+    print("    --template-path PATH  Override default template path")
+    print("  template create/set:")
+    print("    --path PATH         (required) Template file path")
+
+
 def _normalize_cli_options(namespace: argparse.Namespace) -> dict[str, Any]:
     cli_options = {
         key: value
@@ -102,12 +115,15 @@ def _normalize_cli_options(namespace: argparse.Namespace) -> dict[str, Any]:
 
 def main(argv: Sequence[str] | None = None) -> None:
     parser = _build_parser()
-    args = parser.parse_args(list(argv) if argv is not None else None)
+    args_list = list(argv) if argv is not None else sys.argv[1:]
+    if not args_list or "-h" in args_list or "--help" in args_list:
+        _print_help()
+        return
+    args = parser.parse_args(args_list)
 
     # Run pipelines.
     handlers: dict[str, Any] = {
         "ready": pipelines.run_ready,
-        "backfill": pipelines.stub_run_backfill,
         "doctor": pipelines.run_doctor,
         "init": pipelines.run_init,
         "template": None,
