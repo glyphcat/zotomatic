@@ -6,11 +6,11 @@ readme = "README.md"
 authors = [
     { name = "glyphcat", email = "glyphcat13@gmail.com" }
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
     "httpx>=0.28.1",
     "pdfminer.six>=20240706",
-    "pymupdf>=1.26.4",
+    "pymupdf>=1.26.7",
     "pyzotero>=1.6.16",
     "watchfiles>=1.1.0",
 ]
