@@ -31,6 +31,11 @@ zotomatic_tag_status: {zotomatic_tag_status}
 zotomatic_last_updated: {zotomatic_last_updated}
 ---
 
+<!-- Placeholders:
+{generated_summary} = LLM-generated summary
+{zotero_abstract}   = Abstract fetched from Zotero metadata
+{zotero_highlights} = Highlights/comments fetched from Zotero annotations
+-->
 > [!summary] AI-generated Summary
 > {generated_summary}
 
@@ -41,4 +46,3 @@ zotomatic_last_updated: {zotomatic_last_updated}
 {zotero_highlights}
 
 ## Key Points
-
