@@ -237,9 +237,12 @@ def extract_authors_candidate_from_text(text: str, max_len: int = 160) -> str:
     for line in lines[:8]:
         if _looks_like_heading(line):
             continue
-        if len(line.split()) <= 2 and line.replace(" ", "").isalpha():
-            return line[:max_len]
         if any(sep in line for sep in (",", " and ", "・")):
+            return line[:max_len]
+    for line in lines[:8]:
+        if _looks_like_heading(line):
+            continue
+        if len(line.split()) <= 2 and line.replace(" ", "").isalpha():
             return line[:max_len]
     return lines[0][:max_len] if lines else ""
 
