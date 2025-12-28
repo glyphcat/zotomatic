@@ -1,22 +1,26 @@
 """pipelines"""
 
+import os
+import subprocess
+import sys
 import threading
 import time
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+from pyzotero import zotero
 from zotomatic import config
 from zotomatic.llm import create_llm_client
 from zotomatic.logging import get_logger
-from zotomatic.note import (
-    NoteBuilder,
+from zotomatic.note.builder import NoteBuilder
+from zotomatic.note.types import (
     NoteBuilderConfig,
     NoteBuilderContext,
     NoteWorkflowConfig,
     NoteWorkflowContext,
-    NoteWorkflow,
 )
+from zotomatic.note.workflow import NoteWorkflow
 from zotomatic.repositories import (
     LLMUsageRepository,
     NoteRepository,
@@ -273,6 +277,175 @@ def stub_run_backfill(cli_options: Mapping[str, Any] | None = None): ...
 
 
 def stub_run_doctor(cli_options: Mapping[str, Any] | None = None): ...
+
+
+def run_doctor(cli_options: Mapping[str, Any] | None = None):
+    """Doctor command."""
+    logger = get_logger("zotomatic.doctor", False)
+    cli_options = dict(cli_options or {})
+    settings = config.get_config(cli_options)
+
+    results: list[tuple[str, str, str]] = []
+    fails = 0
+    warns = 0
+
+    def _ok(section: str, message: str) -> None:
+        results.append((section, "OK", message))
+
+    def _warn(section: str, message: str) -> None:
+        nonlocal warns
+        warns += 1
+        results.append((section, "WARN", message))
+
+    def _fail(section: str, message: str) -> None:
+        nonlocal fails
+        fails += 1
+        results.append((section, "FAIL", message))
+
+    def _check_zotero_running() -> bool | None:
+        if sys.platform.startswith("win"):
+            try:
+                result = subprocess.run(
+                    ["tasklist"], capture_output=True, text=True, check=False
+                )
+            except OSError:
+                return None
+            return "Zotero.exe" in result.stdout
+        try:
+            result = subprocess.run(
+                ["ps", "-A", "-o", "comm="],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+        except OSError:
+            return None
+        return any("Zotero" in line for line in result.stdout.splitlines())
+
+    config_path = settings.get("config_path")
+    if config_path and Path(str(config_path)).expanduser().exists():
+        _ok("Config", f"config file exists: {config_path}")
+    else:
+        _fail("Config", "config file not found")
+
+    pdf_dir = settings.get("pdf_dir")
+    if not pdf_dir:
+        _fail("Paths", "pdf_dir is not configured")
+    else:
+        pdf_path = Path(str(pdf_dir)).expanduser()
+        if not pdf_path.exists():
+            _fail("Paths", f"pdf_dir does not exist: {pdf_path}")
+        elif not pdf_path.is_dir():
+            _fail("Paths", f"pdf_dir is not a directory: {pdf_path}")
+        elif not os.access(pdf_path, os.R_OK):
+            _fail("Paths", f"pdf_dir is not readable: {pdf_path}")
+        else:
+            _ok("Paths", f"pdf_dir is readable: {pdf_path}")
+
+    note_dir = settings.get("note_dir")
+    if not note_dir:
+        _fail("Paths", "note_dir is not configured")
+    else:
+        note_path = Path(str(note_dir)).expanduser()
+        try:
+            note_path.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            _fail("Paths", f"note_dir cannot be created: {note_path}")
+        else:
+            if not note_path.is_dir():
+                _fail("Paths", f"note_dir is not a directory: {note_path}")
+            elif not os.access(note_path, os.W_OK):
+                _fail("Paths", f"note_dir is not writable: {note_path}")
+            else:
+                _ok("Paths", f"note_dir is writable: {note_path}")
+
+    template_path = settings.get("template_path")
+    if not template_path:
+        _fail("Template", "template_path is not configured")
+    else:
+        template_file = Path(str(template_path)).expanduser()
+        if not template_file.exists():
+            _fail("Template", f"template file not found: {template_file}")
+        elif not template_file.is_file():
+            _fail("Template", f"template_path is not a file: {template_file}")
+        else:
+            _ok("Template", f"template file exists: {template_file}")
+
+    llm_api_key = str(settings.get("llm_api_key") or "").strip()
+    if not llm_api_key:
+        _warn("LLM", "llm_api_key is not set; LLM summary/tag generation is disabled")
+    else:
+        _ok("LLM", "llm_api_key is configured")
+
+    daily_limit = settings.get("llm_daily_limit")
+    try:
+        daily_limit_int = int(daily_limit) if daily_limit is not None else None
+    except (TypeError, ValueError):
+        daily_limit_int = None
+    if daily_limit is not None and daily_limit_int is None:
+        _warn("LLM", "llm_daily_limit is invalid; ignoring")
+
+    zotero_running = _check_zotero_running()
+    if zotero_running is True:
+        _ok("Zotero", "Zotero app is running")
+    elif zotero_running is False:
+        _warn(
+            "Zotero",
+            "Zotero app is not running; notes can be generated but Zotero metadata will be unavailable",
+        )
+    else:
+        _warn("Zotero", "Unable to determine whether Zotero app is running")
+
+    zotero_token = str(settings.get("zotero_api_token") or "").strip()
+    zotero_library_id = str(settings.get("zotero_library_id") or "").strip()
+    zotero_library_scope = str(settings.get("zotero_library_scope") or "user").strip()
+
+    if not zotero_token:
+        _warn("Zotero", "zotero_api_token is not set; Zotero integration disabled")
+    else:
+        if not zotero_library_id:
+            _warn("Zotero", "zotero_library_id is empty; defaulting to user library")
+        try:
+            client = zotero.Zotero(
+                zotero_library_id or "0",
+                zotero_library_scope or "user",
+                zotero_token,
+            )
+            client.items(limit=1)
+            _ok("Zotero", "Zotero API connection succeeded")
+        except Exception as exc:  # pragma: no cover - network dependent
+            _warn(
+                "Zotero",
+                "Zotero API connection failed; metadata enrichment disabled "
+                f"({exc})"
+            )
+
+    label_map = {"OK": "✅", "WARN": "⚠️", "FAIL": "❌"}
+    print("Doctor report:")
+    sections = ["Config", "Paths", "Template", "LLM", "Zotero"]
+    for section in sections:
+        section_items = [item for item in results if item[0] == section]
+        if section_items:
+            status_set = {status for _, status, _ in section_items}
+            if "FAIL" in status_set:
+                section_icon = label_map["FAIL"]
+            elif "WARN" in status_set:
+                section_icon = label_map["WARN"]
+            else:
+                section_icon = label_map["OK"]
+        else:
+            section_icon = label_map["OK"]
+        print("")
+        print(f"* {section_icon} {section}")
+        for _, status, message in section_items:
+            print(f"    - {label_map.get(status, '?')} {message}")
+
+    print(
+        f"\nDoctor summary: {len(results) - warns - fails} OK, {warns} WARN, {fails} FAIL"
+    )
+    if fails:
+        return 1
+    return 0
 
 
 def run_template_create(cli_options: Mapping[str, Any] | None = None):

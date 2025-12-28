@@ -108,7 +108,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     handlers: dict[str, Any] = {
         "ready": pipelines.run_ready,
         "backfill": pipelines.stub_run_backfill,
-        "doctor": pipelines.stub_run_doctor,
+        "doctor": pipelines.run_doctor,
         "init": pipelines.run_init,
         "template": None,
     }

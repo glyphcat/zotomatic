@@ -3,7 +3,8 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from pathlib import Path
 
-from zotomatic.llm import BaseLLMClient, LLMSummaryContext, LLMTagsContext
+from zotomatic.llm.client import BaseLLMClient
+from zotomatic.llm.types import LLMSummaryContext, LLMTagsContext
 from zotomatic.note.builder import NoteBuilder
 from zotomatic.note.types import (
     Note,
@@ -31,8 +32,8 @@ class NoteWorkflow:
         note_repository: NoteRepository,
         llm_client: BaseLLMClient | None,
         config: NoteWorkflowConfig,
-        llm_usage: LLMUsageService | None = None,
         logger,
+        llm_usage: LLMUsageService | None = None,
     ) -> None:
         self._note_builder = note_builder
         self._note_repository = note_repository
