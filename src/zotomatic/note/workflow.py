@@ -93,6 +93,7 @@ class NoteWorkflow:
             zotomatic_last_updated=datetime.now(timezone.utc).isoformat(),
         )
         self._note_updater.update_existing(context=builder_context, existing=existing)
+        print(f"Note updated: {existing}")
         return True
 
     def update_pdf_path_if_changed(self, context: NoteWorkflowContext) -> bool:
@@ -120,11 +121,7 @@ class NoteWorkflow:
             )
         except OSError:  # pragma: no cover - filesystem dependent
             return False
-        self._logger.info(
-            "Note updated (pdf_local, citekey=%s): %s",
-            context.builder_context.citekey,
-            existing,
-        )
+        print(f"Note updated: {existing}")
         return True
 
     def _apply_ai(self, context: NoteBuilderContext) -> NoteBuilderContext:

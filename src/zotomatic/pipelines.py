@@ -85,8 +85,7 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
     logger = get_logger("zotomatic.scan", settings.get("watch_verbose_logging", False))
     try:
         llm_client = create_llm_client(settings)
-    except ZotomaticLLMConfigError as exc:
-        logger.info("LLM client disabled: %s", exc)
+    except ZotomaticLLMConfigError:
         llm_client = None
 
     llm_usage = LLMUsageService(
@@ -135,7 +134,7 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
                     )
                 ):
                     return
-                logger.info(
+                logger.debug(
                     "Note already exists (citekey=%s): %s; skipping.",
                     citekey,
                     existing,
@@ -148,9 +147,9 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
         )
         if citekey:
             citekey_index[citekey] = note.path
-            logger.info("Note created (citekey=%s): %s", citekey, note.path)
+            print(f"Note created: {note.path}")
         else:
-            logger.info("Note created: %s", note.path)
+            print(f"Note created: {note.path}")
 
     def _on_pdf_created(pdf_path):
         logger.debug("Watcher detected %s", pdf_path)
@@ -186,9 +185,9 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
     )
 
     # watcher起動
-    logger.info("Starting scan watcher (%s mode)...", scan_mode)
+    print(f"Scan started ({scan_mode}).")
     with PDFStorageWatcher(watcher_config):
-        logger.info("Scan watcher running.")
+        logger.debug("Scan watcher running.")
         try:
             while True:
                 if not boot_seed_complete:
@@ -200,11 +199,11 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
                     if runtime_seed_complete and not pending_seed_buffer:
                         state_repository.meta.set("boot_seed_complete", "1")
                         boot_seed_complete = True
-                        logger.info("Pending queue boot seed completed.")
+                        logger.debug("Pending queue boot seed completed.")
 
                 processed = pending_processor.run_once()
                 if processed:
-                    logger.info("Pending queue processed %s item(s).", processed)
+                    logger.debug("Pending queue processed %s item(s).", processed)
                 if scan_once:
                     no_due = not pending_queue.get_due(limit=1)
                     if (
@@ -213,7 +212,7 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
                         and not pending_seed_buffer
                         and no_due
                     ):
-                        logger.info("Scan once completed.")
+                        print("Scan completed.")
                         break
                     time.sleep(pending_processor.loop_interval_seconds)
                     continue
@@ -221,9 +220,9 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
                     break
         except KeyboardInterrupt:
             stop_event.set()
-            logger.info("Stopping scan watcher on user request.")
+            logger.debug("Stopping scan watcher on user request.")
 
-    logger.info("Scan watcher stopped (%s mode).", scan_mode)
+    print(f"Scan stopped ({scan_mode}).")
 
     if llm_client:
         llm_client.close()
@@ -242,20 +241,19 @@ def run_init(cli_options: Mapping[str, Any] | None = None):
     settings = config.get_config(cli_options)
 
     if init_result.config_created:
-        logger.info("Config created: %s", init_result.config_path)
+        print(f"Config: created {init_result.config_path}")
     elif init_result.config_updated_keys:
-        logger.info(
-            "Config updated: %s (added: %s)",
-            init_result.config_path,
-            ", ".join(init_result.config_updated_keys),
+        print(
+            f"Config: updated {init_result.config_path} "
+            f"(added: {', '.join(init_result.config_updated_keys)})"
         )
     else:
-        logger.info("Config already exists: %s", init_result.config_path)
+        print(f"Config: exists {init_result.config_path}")
 
     if init_result.template_created:
-        logger.info("Template created: %s", init_result.template_path)
+        print(f"Template: created {init_result.template_path}")
     else:
-        logger.info("Template already exists: %s", init_result.template_path)
+        print(f"Template: exists {init_result.template_path}")
 
     db_config = WatcherStateRepositoryConfig.from_settings(settings)
     db_path = db_config.sqlite_path.expanduser()
@@ -267,9 +265,9 @@ def run_init(cli_options: Mapping[str, Any] | None = None):
         return
 
     if db_exists:
-        logger.info("DB already exists: %s", db_path)
+        print(f"DB: exists {db_path}")
     else:
-        logger.info("DB initialized: %s", db_path)
+        print(f"DB: initialized {db_path}")
 
 
 def stub_run_backfill(cli_options: Mapping[str, Any] | None = None): ...
@@ -462,7 +460,7 @@ def run_template_create(cli_options: Mapping[str, Any] | None = None):
 
     template_target = Path(str(template_path)).expanduser()
     if template_target.exists():
-        logger.info("Template already exists: %s", template_target)
+        print(f"Template: exists {template_target}")
     else:
         template_target.parent.mkdir(parents=True, exist_ok=True)
         source_template = Path(__file__).resolve().parent / "templates" / "note.md"
@@ -473,12 +471,12 @@ def run_template_create(cli_options: Mapping[str, Any] | None = None):
             source_template.read_text(encoding="utf-8"),
             encoding="utf-8",
         )
-        logger.info("Template created: %s", template_target)
+        print(f"Template: created {template_target}")
 
     if updated:
-        logger.info("Config updated: template_path=%s", template_target)
+        print(f"Config: updated template_path={template_target}")
     else:
-        logger.info("Config already set: template_path=%s", template_target)
+        print(f"Config: exists template_path={template_target}")
 
 
 def run_template_set(cli_options: Mapping[str, Any] | None = None):
@@ -497,6 +495,6 @@ def run_template_set(cli_options: Mapping[str, Any] | None = None):
     if not template_target.exists():
         logger.warning("Template not found: %s", template_target)
     if updated:
-        logger.info("Config updated: template_path=%s", template_target)
+        print(f"Config: updated template_path={template_target}")
     else:
-        logger.info("Config already set: template_path=%s", template_target)
+        print(f"Config: exists template_path={template_target}")
