@@ -22,10 +22,10 @@ _DEFAULT_CONFIG = Path("~/.zotomatic/config.toml").expanduser()
 - pdf_dir: PDFファイルの格納先。ファイル保存の監視先。必要
 - pdf_alias_prefix: gitでのコミット管理時に自分が設定したマスクに使う文字列。不要
 - llm_provider: 今後の拡張用で、今は使用していない。あってもいい。必須ではない
-- llm_model: LLMモデル名。必須？ChatGPTのみに限定するなら必須ではない
+- llm_openai_model: LLMモデル名。必須？ChatGPTのみに限定するなら必須ではない
 - llm_tag_enabled: AI生成のtagを埋め込みするか？必要？ -> LLM利用は有料だったりするため必要とする,
 - llm_summary_enabled: AI生成の要約を埋め込みするか？必要？ -> LLM利用は有料だったりするため必要とする,
-- llm_api_key: LLMのAPIキー。必須,
+- llm_openai_api_key: LLMのAPIキー。必須,
 - llm_max_input_chars: 14000 必須じゃないが設定値としてはOKとする,
 - llm_daily_limit: 1日の利用制限。これはタグ生成とくっつけるべきかもしれない。あった方がいい,
 - zotero_api_token: zoteroのAPIキーで必須,
@@ -44,13 +44,13 @@ _DEFAULT_SETTINGS: dict[str, Any] = {
     "pdf_dir": "~/Zotero/storage",
     "pdf_alias_prefix": "zotero:/storage",
     "llm_provider": "openai",
-    "llm_model": "gpt-4o-mini",
-    "llm_base_url": "https://api.openai.com/v1",
+    "llm_openai_model": "gpt-4o-mini",
+    "llm_openai_base_url": "https://api.openai.com/v1",
     "llm_output_language": "ja",
     "llm_summary_mode": "quick",
     "llm_tag_enabled": True,
     "llm_summary_enabled": True,
-    "llm_api_key": "",
+    "llm_openai_api_key": "",
     "llm_max_input_chars": 14000,
     "llm_daily_limit": 50,
     "tag_generation_limit": 8,
@@ -79,7 +79,7 @@ def _build_default_config_template(settings: Mapping[str, Any]) -> str:
         [
             "# Zotomatic configuration",
             "#",
-            "# Update llm_api_key (or export OPENAI_API_KEY / ZOTOMATIC_LLM_API_KEY) before running `zotomatic ready`.",
+            "# Update llm_openai_api_key (or export OPENAI_API_KEY / ZOTOMATIC_LLM_API_KEY) before running `zotomatic ready`.",
             "",
             "# Paths & watcher",
             f"note_dir = {_render_value(settings['note_dir'])}",
@@ -95,7 +95,7 @@ def _build_default_config_template(settings: Mapping[str, Any]) -> str:
             f"template_path = {_render_value(settings['template_path'])}",
             "",
             "# AI integration",
-            f"llm_api_key = {_render_value(settings['llm_api_key'])}",
+            f"llm_openai_api_key = {_render_value(settings['llm_openai_api_key'])}",
             f"llm_summary_enabled = {_render_value(settings['llm_summary_enabled'])}",
             f"llm_tag_enabled = {_render_value(settings['llm_tag_enabled'])}",
             f"llm_summary_mode = {_render_value(settings['llm_summary_mode'])}",
@@ -109,8 +109,8 @@ def _build_default_config_template(settings: Mapping[str, Any]) -> str:
     )
 
 _ENV_ALIASES = {
-    "OPENAI_API_KEY": "llm_api_key",
-    "ZOTOMATIC_AI_API_KEY": "llm_api_key",
+    "OPENAI_API_KEY": "llm_openai_api_key",
+    "ZOTOMATIC_AI_API_KEY": "llm_openai_api_key",
     "OPENAI_MAX_INPUT_CHARS": "llm_max_input_chars",
     "ZOTOMATIC_AI_MAX_INPUT_CHARS": "llm_max_input_chars",
     "OPENAI_MAX_RUNS_PER_DAY": "llm_daily_limit",
@@ -218,7 +218,12 @@ def get_config(cli_options: Mapping[str, Any] | None = None) -> dict[str, Any]:
     merged.update(env_config)
     merged.update(cli_config)
 
-    for key in ("pdf_alias_prefix", "llm_provider", "llm_model", "llm_base_url"):
+    for key in (
+        "pdf_alias_prefix",
+        "llm_provider",
+        "llm_openai_model",
+        "llm_openai_base_url",
+    ):
         merged[key] = _DEFAULT_SETTINGS[key]
 
     merged["config_path"] = str(config_path)

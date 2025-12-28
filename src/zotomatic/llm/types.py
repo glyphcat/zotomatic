@@ -27,14 +27,16 @@ class LLMClientConfig:
 
     @classmethod
     def from_settings(cls, settings: Mapping[str, object]) -> LLMClientConfig:
-        api_key = str(settings.get("llm_api_key") or "").strip()
+        api_key = str(settings.get("llm_openai_api_key") or "").strip()
         if not api_key:
             raise ValueError(
-                "`llm_api_key` must be configured before using the LLM client."
+                "`llm_openai_api_key` must be configured before using the LLM client."
             )
 
-        base_url = str(settings.get("llm_base_url") or "https://api.openai.com/v1")
-        model = str(settings.get("llm_model") or "gpt-4o-mini")
+        base_url = str(
+            settings.get("llm_openai_base_url") or "https://api.openai.com/v1"
+        )
+        model = str(settings.get("llm_openai_model") or "gpt-4o-mini")
         raw_timeout = settings.get("llm_timeout")
         timeout: float = raw_timeout if isinstance(raw_timeout, float) else 30.0
         language_code = str(settings.get("llm_output_language") or "en").strip() or "en"

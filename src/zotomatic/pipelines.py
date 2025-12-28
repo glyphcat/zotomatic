@@ -371,11 +371,14 @@ def run_doctor(cli_options: Mapping[str, Any] | None = None):
         else:
             _ok("Template", f"template file exists: {template_file}")
 
-    llm_api_key = str(settings.get("llm_api_key") or "").strip()
+    llm_api_key = str(settings.get("llm_openai_api_key") or "").strip()
     if not llm_api_key:
-        _warn("LLM", "llm_api_key is not set; LLM summary/tag generation is disabled")
+        _warn(
+            "LLM",
+            "llm_openai_api_key is not set; LLM summary/tag generation is disabled",
+        )
     else:
-        _ok("LLM", "llm_api_key is configured")
+        _ok("LLM", "llm_openai_api_key is configured")
 
     daily_limit = settings.get("llm_daily_limit")
     try:
