@@ -6,7 +6,7 @@ import re
 import unicodedata
 
 _SLUG_REGEX = re.compile(r"[^a-z0-9]+")
-_INVALID_FILENAME_CHARS = re.compile(r'[<>:"/\\\\|?*\\x00-\\x1F]')
+_INVALID_FILENAME_CHARS = re.compile('[<>:"/\\\\|?*\x00-\x1F]')
 _WINDOWS_RESERVED = {
     "CON",
     "PRN",
