@@ -35,7 +35,7 @@ _DEFAULT_CONFIG = Path("~/.zotomatic/config.toml").expanduser()
 """
 
 _TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
-_DEFAULT_TEMPLATE_PATH = "~/.zotomatic/template/note.md"
+_DEFAULT_TEMPLATE_PATH = "~/Zotomatic/templates/note.md"
 
 
 _DEFAULT_SETTINGS: dict[str, Any] = {
