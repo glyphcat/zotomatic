@@ -84,3 +84,31 @@ def update_frontmatter_value(
     if text.endswith("\n"):
         updated += "\n"
     return updated, True
+
+
+def ensure_frontmatter_keys(
+    text: str, required: dict[str, str]
+) -> str:
+    if not required:
+        return text
+    required_items = [(key, str(value)) for key, value in required.items()]
+    if text.startswith("---"):
+        meta = parse_frontmatter(text)
+        updated = text
+        for key, value in required_items:
+            if key in meta:
+                continue
+            updated, _ = update_frontmatter_value(updated, key, value)
+        return updated
+
+    lines = ["---"]
+    for key, value in required_items:
+        lines.append(f"{key}: {value}")
+    lines.append("---")
+    lines.append("")
+    if text:
+        lines.append(text.lstrip("\n"))
+    result = "\n".join(lines)
+    if text.endswith("\n"):
+        result += "\n"
+    return result

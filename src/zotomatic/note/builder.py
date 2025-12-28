@@ -7,6 +7,7 @@ from zotomatic.errors import NoteRepositoryError
 from zotomatic.note.types import Note, NoteBuilderConfig, NoteBuilderContext
 from zotomatic.repositories import NoteRepository
 from zotomatic.utils import slug
+from zotomatic.utils.note import ensure_frontmatter_keys
 
 _FILENAME_TOKEN = re.compile(r"\{\{\s*(\w+)\s*\}\}")
 
@@ -37,6 +38,7 @@ class NoteBuilder:
 
         prepared_context = self._prepare_context(context)
         rendered = self._render_from_prepared(prepared_context)
+        rendered = self._ensure_required_frontmatter(rendered, prepared_context)
         output_path = relative_path or self._build_output_path(prepared_context)
         path = self._repository.write(output_path, rendered)
         citekey = prepared_context.get("citekey")
@@ -133,6 +135,32 @@ class NoteBuilder:
         prepared["slug40"] = slug.slugify(slug_source, max_length=40)
 
         return prepared
+
+    def _ensure_required_frontmatter(
+        self,
+        rendered: str,
+        prepared_context: dict[str, Any],
+    ) -> str:
+        tags_value = prepared_context.get("tags", "")
+        tags = f"[{tags_value}]" if tags_value else "[]"
+        required = {
+            "citekey": prepared_context.get("citekey", "") or "",
+            "pdf_local": prepared_context.get("pdf_path", "") or "",
+            "zotomatic_summary_status": prepared_context.get(
+                "zotomatic_summary_status", "pending"
+            )
+            or "pending",
+            "zotomatic_tag_status": prepared_context.get(
+                "zotomatic_tag_status", "pending"
+            )
+            or "pending",
+            "zotomatic_summary_mode": prepared_context.get(
+                "zotomatic_summary_mode", ""
+            )
+            or "",
+            "tags": tags,
+        }
+        return ensure_frontmatter_keys(rendered, required)
 
     def _build_output_path(self, prepared_context: dict[str, Any]) -> Path:
         pattern = self._config.filename_pattern
