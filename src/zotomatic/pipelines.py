@@ -45,9 +45,9 @@ def _merge_config(cli_options: Mapping[str, Any] | None) -> dict[str, Any]:
 
 
 
-def run_ready(cli_options: Mapping[str, Any] | None = None):
+def run_scan(cli_options: Mapping[str, Any] | None = None):
     """
-    Ready command
+    Scan command
     """
 
     # Zotomaticのユーザー設定取得
@@ -78,7 +78,7 @@ def run_ready(cli_options: Mapping[str, Any] | None = None):
     summary_mode = str(settings.get("llm_summary_mode", "quick") or "quick")
 
     # LLMClient生成
-    logger = get_logger("zotomatic.ready", settings.get("watch_verbose_logging", False))
+    logger = get_logger("zotomatic.scan", settings.get("watch_verbose_logging", False))
     try:
         llm_client = create_llm_client(settings)
     except ValueError as exc:
@@ -195,7 +195,7 @@ def run_ready(cli_options: Mapping[str, Any] | None = None):
     )
 
     # watcher起動
-    logger.info("Starting watcher (ready mode)...")
+    logger.info("Starting watcher (scan mode)...")
     with PDFStorageWatcher(watcher_config):
         logger.info(
             "Watcher is running; placeholder logic keeps process alive briefly."
@@ -224,7 +224,7 @@ def run_ready(cli_options: Mapping[str, Any] | None = None):
             stop_event.set()
             logger.info("Stopping watcher at user request")
 
-    logger.info("Watcher stopped (ready mode).")
+    logger.info("Watcher stopped (scan mode).")
 
     if llm_client:
         llm_client.close()

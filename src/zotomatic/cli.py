@@ -20,7 +20,7 @@ cli.py で --verbose をパース → get_logger(verbose=args.verbose)
 例外は errors.py のクラスで揃えて投げる
 
 try:
-    api.run_ready(config, logger=logger)
+    api.run_scan(config, logger=logger)
 except ZotomaticError as e:
     logger.error(f"fatal: {e}")
     sys.exit(1)
@@ -36,7 +36,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    subparsers.add_parser("ready", help="Generate the next ready note")
+    subparsers.add_parser("scan", help="Scan for PDFs and generate notes")
     subparsers.add_parser("doctor", help="Inspect project health")
     init = subparsers.add_parser(
         "init", help="Initialize a Zotomatic workspace"
@@ -86,7 +86,7 @@ def _print_help() -> None:
     print("  zotomatic <command> [options]")
     print("")
     print("Commands:")
-    print("  ready                 Generate the next ready note")
+    print("  scan                  Scan for PDFs and generate notes")
     print("  doctor                Inspect project health")
     print("  init                  Initialize a Zotomatic workspace")
     print("  template create       Create a template and update config")
@@ -123,7 +123,7 @@ def main(argv: Sequence[str] | None = None) -> None:
 
     # Run pipelines.
     handlers: dict[str, Any] = {
-        "ready": pipelines.run_ready,
+        "scan": pipelines.run_scan,
         "doctor": pipelines.run_doctor,
         "init": pipelines.run_init,
         "template": None,

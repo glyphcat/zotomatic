@@ -59,7 +59,7 @@ def _build_default_config_template(settings: Mapping[str, Any]) -> str:
         [
             "# Zotomatic configuration",
             "#",
-            "# Update llm_openai_api_key (or export ZOTOMATIC_LLM_OPENAI_API_KEY) before running `zotomatic ready`.",
+            "# Update llm_openai_api_key (or export ZOTOMATIC_LLM_OPENAI_API_KEY) before running `zotomatic scan`.",
             "",
             "# Paths & watcher",
             f"note_dir = {_render_value(settings['note_dir'])}",
