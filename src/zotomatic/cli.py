@@ -42,6 +42,16 @@ def _build_parser() -> argparse.ArgumentParser:
         dest="note_dir",
         help="Directory for generated notes",
     )
+    shared.add_argument(
+        "--pdf-dir",
+        dest="pdf_dir",
+        help="Directory containing PDF files",
+    )
+    shared.add_argument(
+        "--template-path",
+        dest="template_path",
+        help="Path to the note template",
+    )
 
     ready = subparsers.add_parser(
         "ready", parents=[shared], help="Generate the next ready note"

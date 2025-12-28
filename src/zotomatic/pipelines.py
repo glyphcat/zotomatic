@@ -222,6 +222,10 @@ def run_ready(cli_options: Mapping[str, Any] | None = None):
 def run_init(cli_options: Mapping[str, Any] | None = None):
     """Init command."""
     logger = get_logger("zotomatic.init", False)
+    cli_options = dict(cli_options or {})
+    if not cli_options.get("pdf_dir"):
+        logger.error("Missing required option: --pdf-dir")
+        return
     init_result = config.initialize_config(cli_options)
     settings = config.get_config(cli_options)
 

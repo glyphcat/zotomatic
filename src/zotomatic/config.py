@@ -73,38 +73,39 @@ def _render_value(value: Any) -> str:
     return f'"{escaped}"'
 
 
-_DEFAULT_CONFIG_TEMPLATE = "\n".join(
-    [
-        "# Zotomatic configuration",
-        "#",
-        "# Update llm_api_key (or export OPENAI_API_KEY / ZOTOMATIC_LLM_API_KEY) before running `zotomatic ready`.",
-        "",
-        "# Paths & watcher",
-        f"note_dir = {_render_value(_DEFAULT_SETTINGS['note_dir'])}",
-        f"pdf_dir = {_render_value(_DEFAULT_SETTINGS['pdf_dir'])}",
-        "",
-        "# Zotero",
-        f"zotero_api_token = {_render_value(_DEFAULT_SETTINGS['zotero_api_token'])}",
-        f"zotero_library_id = {_render_value(_DEFAULT_SETTINGS['zotero_library_id'])}",
-        f"zotero_library_scope = {_render_value(_DEFAULT_SETTINGS['zotero_library_scope'])}",
-        "",
-        "# Obsidian notes",
-        f"note_title_pattern = {_render_value(_DEFAULT_SETTINGS['note_title_pattern'])}",
-        f"template_path = {_render_value(_DEFAULT_SETTINGS['template_path'])}",
-        "",
-        "# AI integration",
-        f"llm_api_key = {_render_value(_DEFAULT_SETTINGS['llm_api_key'])}",
-        f"llm_summary_enabled = {_render_value(_DEFAULT_SETTINGS['llm_summary_enabled'])}",
-        f"llm_tag_enabled = {_render_value(_DEFAULT_SETTINGS['llm_tag_enabled'])}",
-        f"llm_summary_mode = {_render_value(_DEFAULT_SETTINGS['llm_summary_mode'])}",
-        f"llm_max_input_chars = {_render_value(_DEFAULT_SETTINGS['llm_max_input_chars'])}",
-        f"summary_daily_quota = {_render_value(_DEFAULT_SETTINGS['summary_daily_quota'])}",
-        "",
-        "# Tagging",
-        f"tag_generation_limit = {_render_value(_DEFAULT_SETTINGS['tag_generation_limit'])}",
-        "",
-    ]
-)
+def _build_default_config_template(settings: Mapping[str, Any]) -> str:
+    return "\n".join(
+        [
+            "# Zotomatic configuration",
+            "#",
+            "# Update llm_api_key (or export OPENAI_API_KEY / ZOTOMATIC_LLM_API_KEY) before running `zotomatic ready`.",
+            "",
+            "# Paths & watcher",
+            f"note_dir = {_render_value(settings['note_dir'])}",
+            f"pdf_dir = {_render_value(settings['pdf_dir'])}",
+            "",
+            "# Zotero",
+            f"zotero_api_token = {_render_value(settings['zotero_api_token'])}",
+            f"zotero_library_id = {_render_value(settings['zotero_library_id'])}",
+            f"zotero_library_scope = {_render_value(settings['zotero_library_scope'])}",
+            "",
+            "# Obsidian notes",
+            f"note_title_pattern = {_render_value(settings['note_title_pattern'])}",
+            f"template_path = {_render_value(settings['template_path'])}",
+            "",
+            "# AI integration",
+            f"llm_api_key = {_render_value(settings['llm_api_key'])}",
+            f"llm_summary_enabled = {_render_value(settings['llm_summary_enabled'])}",
+            f"llm_tag_enabled = {_render_value(settings['llm_tag_enabled'])}",
+            f"llm_summary_mode = {_render_value(settings['llm_summary_mode'])}",
+            f"llm_max_input_chars = {_render_value(settings['llm_max_input_chars'])}",
+            f"summary_daily_quota = {_render_value(settings['summary_daily_quota'])}",
+            "",
+            "# Tagging",
+            f"tag_generation_limit = {_render_value(settings['tag_generation_limit'])}",
+            "",
+        ]
+    )
 
 _ENV_ALIASES = {
     "OPENAI_API_KEY": "llm_api_key",
@@ -209,11 +210,18 @@ class InitResult:
 def initialize_config(cli_options: Mapping[str, Any] | None = None) -> InitResult:
     config_path = _resolve_config_path(cli_options)
     config_path.parent.mkdir(parents=True, exist_ok=True)
+    cli_options = dict(cli_options or {})
+    init_settings = dict(_DEFAULT_SETTINGS)
+    for key, value in cli_options.items():
+        if key in init_settings and value is not None:
+            init_settings[key] = value
 
     config_created = False
     config_updated_keys: list[str] = []
     if not config_path.exists():
-        config_path.write_text(_DEFAULT_CONFIG_TEMPLATE, encoding="utf-8")
+        config_path.write_text(
+            _build_default_config_template(init_settings), encoding="utf-8"
+        )
         config_created = True
     else:
         existing_content = config_path.read_text(encoding="utf-8")
@@ -227,15 +235,15 @@ def initialize_config(cli_options: Mapping[str, Any] | None = None) -> InitResul
                     "\n# Added by zotomatic init to ensure required defaults.\n"
                 )
                 for key in missing_keys:
-                    handle.write(f"{key} = {_render_value(_DEFAULT_SETTINGS[key])}\n")
+                    handle.write(f"{key} = {_render_value(init_settings[key])}\n")
 
-    template_path_value = _DEFAULT_SETTINGS["template_path"]
+    template_path_value = init_settings["template_path"]
     try:
         file_config = _load_file_config(config_path)
-        if file_config.get("template_path"):
+        if "template_path" not in cli_options and file_config.get("template_path"):
             template_path_value = file_config["template_path"]
     except OSError:
-        template_path_value = _DEFAULT_SETTINGS["template_path"]
+        template_path_value = init_settings["template_path"]
 
     template_path = Path(str(template_path_value)).expanduser()
     template_created = False
