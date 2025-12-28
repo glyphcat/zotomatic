@@ -83,7 +83,6 @@ _DEFAULT_CONFIG_TEMPLATE = "\n".join(
         "# Paths & watcher",
         f"notes_output_dir = {_render_value(_DEFAULT_SETTINGS['notes_output_dir'])}",
         f"pdf_library_dir = {_render_value(_DEFAULT_SETTINGS['pdf_library_dir'])}",
-        f"pdf_alias_prefix = {_render_value(_DEFAULT_SETTINGS['pdf_alias_prefix'])}",
         "",
         "# Zotero",
         f"zotero_api_token = {_render_value(_DEFAULT_SETTINGS['zotero_api_token'])}",
@@ -95,8 +94,6 @@ _DEFAULT_CONFIG_TEMPLATE = "\n".join(
         f"note_template_path = {_render_value(_DEFAULT_SETTINGS['note_template_path'])}",
         "",
         "# AI integration",
-        f"llm_provider = {_render_value(_DEFAULT_SETTINGS['llm_provider'])}",
-        f"llm_model = {_render_value(_DEFAULT_SETTINGS['llm_model'])}",
         f"llm_api_key = {_render_value(_DEFAULT_SETTINGS['llm_api_key'])}",
         f"llm_summary_enabled = {_render_value(_DEFAULT_SETTINGS['llm_summary_enabled'])}",
         f"llm_tag_enabled = {_render_value(_DEFAULT_SETTINGS['llm_tag_enabled'])}",
@@ -113,8 +110,6 @@ _DEFAULT_CONFIG_TEMPLATE = "\n".join(
 _ENV_ALIASES = {
     "OPENAI_API_KEY": "llm_api_key",
     "ZOTOMATIC_AI_API_KEY": "llm_api_key",
-    "ZOTOMATIC_AI_MODEL": "llm_model",
-    "OPENAI_MODEL": "llm_model",
     "OPENAI_MAX_INPUT_CHARS": "llm_max_input_chars",
     "ZOTOMATIC_AI_MAX_INPUT_CHARS": "llm_max_input_chars",
     "OPENAI_MAX_RUNS_PER_DAY": "summary_daily_quota",
@@ -124,10 +119,8 @@ _ENV_ALIASES = {
     "ZOTERO_LIBRARY_ID": "zotero_library_id",
     "ZOTERO_LIBRARY_TYPE": "zotero_library_scope",
     "PDF_ROOT": "pdf_library_dir",
-    "PDF_ALIAS_ROOT": "pdf_alias_prefix",
     "OUTPUT_DIR": "notes_output_dir",
     "NOTE_TITLE_TEMPLATE": "note_title_pattern",
-    "LLM_BASE_URL": "llm_base_url",
     "LLM_OUTPUT_LANGUAGE": "llm_output_language",
 }
 
@@ -197,6 +190,9 @@ def get_config(cli_options: Mapping[str, Any] | None = None) -> dict[str, Any]:
     merged.update(file_config)
     merged.update(env_config)
     merged.update(cli_config)
+
+    for key in ("pdf_alias_prefix", "llm_provider", "llm_model", "llm_base_url"):
+        merged[key] = _DEFAULT_SETTINGS[key]
 
     merged["config_path"] = str(config_path)
     return merged
