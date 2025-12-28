@@ -45,11 +45,15 @@ def _merge_config(cli_options: Mapping[str, Any] | None) -> dict[str, Any]:
 
 
 def run_scan(cli_options: Mapping[str, Any] | None = None):
-    """
-    Scan command
-    """
+    """Scan command."""
 
     # Zotomaticのユーザー設定取得
+    cli_options = dict(cli_options or {})
+    scan_once = bool(cli_options.pop("once", False))
+    scan_watch = bool(cli_options.pop("watch", False))
+    if not scan_once and not scan_watch:
+        scan_watch = True
+    scan_mode = "once" if scan_once else "watch"
     settings = _merge_config(cli_options)
 
     # repositoryの準備
@@ -181,7 +185,7 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
     )
 
     # watcher起動
-    logger.info("Starting watcher (scan mode)...")
+    logger.info("Starting watcher (scan %s mode)...", scan_mode)
     with PDFStorageWatcher(watcher_config):
         logger.info(
             "Watcher is running; placeholder logic keeps process alive briefly."
@@ -204,13 +208,25 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
                     logger.info(
                         "Pending queue processor processed %s item(s).", processed
                     )
+                if scan_once:
+                    no_due = not pending_queue.get_due(limit=1)
+                    if (
+                        runtime_seed_complete
+                        and boot_seed_complete
+                        and not pending_seed_buffer
+                        and no_due
+                    ):
+                        logger.info("Scan once completed.")
+                        break
+                    time.sleep(pending_processor.loop_interval_seconds)
+                    continue
                 if stop_event.wait(pending_processor.loop_interval_seconds):
                     break
         except KeyboardInterrupt:
             stop_event.set()
             logger.info("Stopping watcher at user request")
 
-    logger.info("Watcher stopped (scan mode).")
+    logger.info("Watcher stopped (scan %s mode).", scan_mode)
 
     if llm_client:
         llm_client.close()

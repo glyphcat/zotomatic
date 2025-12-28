@@ -36,7 +36,18 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    subparsers.add_parser("scan", help="Scan for PDFs and generate notes")
+    scan = subparsers.add_parser("scan", help="Scan for PDFs and generate notes")
+    scan_mode = scan.add_mutually_exclusive_group()
+    scan_mode.add_argument(
+        "--once",
+        action="store_true",
+        help="Scan existing PDFs once and exit",
+    )
+    scan_mode.add_argument(
+        "--watch",
+        action="store_true",
+        help="Watch for new PDFs (default)",
+    )
     subparsers.add_parser("doctor", help="Inspect project health")
     init = subparsers.add_parser(
         "init", help="Initialize a Zotomatic workspace"
@@ -96,6 +107,9 @@ def _print_help() -> None:
     print("  -h, --help            Show this help message and exit")
     print("")
     print("Command options:")
+    print("  scan:")
+    print("    --once              Scan existing PDFs once and exit")
+    print("    --watch             Watch for new PDFs (default)")
     print("  init:")
     print("    --pdf-dir PATH      (required) Directory containing PDF files")
     print("    --note-dir PATH     Override default note directory")
