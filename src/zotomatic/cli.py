@@ -38,9 +38,9 @@ def _build_parser() -> argparse.ArgumentParser:
         "--config-path", dest="config_path", help="Override path to config file"
     )
     shared.add_argument(
-        "--output-dir",
-        dest="notes_output_dir",
-        help="Directory for generated artifacts",
+        "--note-dir",
+        dest="note_dir",
+        help="Directory for generated notes",
     )
 
     ready = subparsers.add_parser(

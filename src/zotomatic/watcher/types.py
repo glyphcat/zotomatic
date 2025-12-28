@@ -56,10 +56,10 @@ class WatcherConfig:
         state_repository: WatcherStateRepository | None = None,
         on_initial_scan_complete: Callable[[], None] | None = None,
     ) -> WatcherConfig:
-        watch_dir = settings.get("pdf_library_dir")
+        watch_dir = settings.get("pdf_dir")
         if not watch_dir:
             raise WatcherError(
-                "`pdf_library_dir` must be configured before starting the watcher."
+                "`pdf_dir` must be configured before starting the watcher."
             )
         verbose = bool(settings.get("watch_verbose_logging", False))
         return cls(

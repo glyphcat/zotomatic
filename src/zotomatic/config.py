@@ -17,8 +17,8 @@ _DEFAULT_CONFIG = Path("~/.zotomatic/config.toml").expanduser()
 
 # TODO: 設定キーの整理
 """
-- notes_output_dir: mdファイルの出力先。必要
-- pdf_library_dir: PDFファイルの格納先。ファイル保存の監視先。必要
+- note_dir: mdファイルの出力先。必要
+- pdf_dir: PDFファイルの格納先。ファイル保存の監視先。必要
 - pdf_alias_prefix: gitでのコミット管理時に自分が設定したマスクに使う文字列。不要
 - llm_provider: 今後の拡張用で、今は使用していない。あってもいい。必須ではない
 - llm_model: LLMモデル名。必須？ChatGPTのみに限定するなら必須ではない
@@ -39,8 +39,8 @@ _DEFAULT_TEMPLATE_PATH = "~/Zotomatic/templates/note.md"
 
 
 _DEFAULT_SETTINGS: dict[str, Any] = {
-    "notes_output_dir": "~/Zotomatic/notes",
-    "pdf_library_dir": "~/Zotero/storage",
+    "note_dir": "~/Zotomatic/notes",
+    "pdf_dir": "~/Zotero/storage",
     "pdf_alias_prefix": "zotero:/storage",
     "llm_provider": "openai",
     "llm_model": "gpt-4o-mini",
@@ -57,7 +57,7 @@ _DEFAULT_SETTINGS: dict[str, Any] = {
     "zotero_library_id": "",
     "zotero_library_scope": "user",
     "note_title_pattern": "{{ year }}-{{ slug80 }}-{{ citekey }}",
-    "note_template_path": _DEFAULT_TEMPLATE_PATH,
+    "template_path": _DEFAULT_TEMPLATE_PATH,
 }
 
 
@@ -80,8 +80,8 @@ _DEFAULT_CONFIG_TEMPLATE = "\n".join(
         "# Update llm_api_key (or export OPENAI_API_KEY / ZOTOMATIC_LLM_API_KEY) before running `zotomatic ready`.",
         "",
         "# Paths & watcher",
-        f"notes_output_dir = {_render_value(_DEFAULT_SETTINGS['notes_output_dir'])}",
-        f"pdf_library_dir = {_render_value(_DEFAULT_SETTINGS['pdf_library_dir'])}",
+        f"note_dir = {_render_value(_DEFAULT_SETTINGS['note_dir'])}",
+        f"pdf_dir = {_render_value(_DEFAULT_SETTINGS['pdf_dir'])}",
         "",
         "# Zotero",
         f"zotero_api_token = {_render_value(_DEFAULT_SETTINGS['zotero_api_token'])}",
@@ -90,7 +90,7 @@ _DEFAULT_CONFIG_TEMPLATE = "\n".join(
         "",
         "# Obsidian notes",
         f"note_title_pattern = {_render_value(_DEFAULT_SETTINGS['note_title_pattern'])}",
-        f"note_template_path = {_render_value(_DEFAULT_SETTINGS['note_template_path'])}",
+        f"template_path = {_render_value(_DEFAULT_SETTINGS['template_path'])}",
         "",
         "# AI integration",
         f"llm_api_key = {_render_value(_DEFAULT_SETTINGS['llm_api_key'])}",
@@ -117,8 +117,8 @@ _ENV_ALIASES = {
     "ZOTERO_API_TOKEN": "zotero_api_token",
     "ZOTERO_LIBRARY_ID": "zotero_library_id",
     "ZOTERO_LIBRARY_TYPE": "zotero_library_scope",
-    "PDF_ROOT": "pdf_library_dir",
-    "OUTPUT_DIR": "notes_output_dir",
+    "PDF_ROOT": "pdf_dir",
+    "OUTPUT_DIR": "note_dir",
     "NOTE_TITLE_TEMPLATE": "note_title_pattern",
     "LLM_OUTPUT_LANGUAGE": "llm_output_language",
 }
@@ -229,13 +229,13 @@ def initialize_config(cli_options: Mapping[str, Any] | None = None) -> InitResul
                 for key in missing_keys:
                     handle.write(f"{key} = {_render_value(_DEFAULT_SETTINGS[key])}\n")
 
-    template_path_value = _DEFAULT_SETTINGS["note_template_path"]
+    template_path_value = _DEFAULT_SETTINGS["template_path"]
     try:
         file_config = _load_file_config(config_path)
-        if file_config.get("note_template_path"):
-            template_path_value = file_config["note_template_path"]
+        if file_config.get("template_path"):
+            template_path_value = file_config["template_path"]
     except OSError:
-        template_path_value = _DEFAULT_SETTINGS["note_template_path"]
+        template_path_value = _DEFAULT_SETTINGS["template_path"]
 
     template_path = Path(str(template_path_value)).expanduser()
     template_created = False

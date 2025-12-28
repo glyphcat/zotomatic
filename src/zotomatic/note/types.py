@@ -22,9 +22,9 @@ class NoteBuilderConfig:
         cls, settings: Mapping[str, Any] | None = None
     ) -> "NoteBuilderConfig":
         settings = settings or {}
-        template_path = settings.get("note_template_path")
+        template_path = settings.get("template_path")
         if not template_path:
-            raise MissingSettingError("note_template_path")
+            raise MissingSettingError("template_path")
 
         filename_pattern = settings.get("note_title_pattern")
         if not filename_pattern:

@@ -23,9 +23,9 @@ class NoteRepositoryConfig:
 
     @classmethod
     def from_settings(cls, settings: Mapping[str, Any]) -> NoteRepositoryConfig:
-        note_dir = settings.get("notes_output_dir")
+        note_dir = settings.get("note_dir")
         if not note_dir:
-            raise MissingSettingError("notes_output_dir")
+            raise MissingSettingError("note_dir")
         encoding = settings.get("notes_encoding", "utf-8")
         return cls(root_dir=Path(note_dir), encoding=encoding)
 
@@ -43,9 +43,9 @@ class PDFRepositoryConfig:
 
     @classmethod
     def from_settings(cls, settings: Mapping[str, Any]) -> PDFRepositoryConfig:
-        pdf_dir = settings.get("pdf_library_dir")
+        pdf_dir = settings.get("pdf_dir")
         if not pdf_dir:
-            raise MissingSettingError("pdf_library_dir")
+            raise MissingSettingError("pdf_dir")
         recursive = bool(settings.get("pdf_scan_recursive", True))
         pattern = str(settings.get("pdf_glob_pattern", "*.pdf"))
         return cls(library_dir=Path(pdf_dir), recursive=recursive, pattern=pattern)
