@@ -34,6 +34,7 @@ _DEFAULT_CONFIG = Path("~/.zotomatic/config.toml").expanduser()
 """
 
 _TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
+_DEFAULT_TEMPLATE_PATH = "~/.zotomatic/template/note.md"
 
 
 _DEFAULT_SETTINGS: dict[str, Any] = {
@@ -55,7 +56,7 @@ _DEFAULT_SETTINGS: dict[str, Any] = {
     "zotero_library_id": "",
     "zotero_library_scope": "user",
     "note_title_pattern": "{{ year }}-{{ slug80 }}-{{ citekey }}",
-    "note_template_path": str(_TEMPLATES_DIR / "default.md"),
+    "note_template_path": _DEFAULT_TEMPLATE_PATH,
     "heading_summary": "AI-generated Summary",
     "heading_abstract": "Abstract",
 }
@@ -91,6 +92,7 @@ _DEFAULT_CONFIG_TEMPLATE = "\n".join(
         "",
         "# Obsidian notes",
         f"note_title_pattern = {_render_value(_DEFAULT_SETTINGS['note_title_pattern'])}",
+        f"note_template_path = {_render_value(_DEFAULT_SETTINGS['note_template_path'])}",
         "",
         "# AI integration",
         f"llm_provider = {_render_value(_DEFAULT_SETTINGS['llm_provider'])}",
@@ -218,5 +220,26 @@ def initialize_config(cli_options: Mapping[str, Any] | None = None) -> Path:
                 )
                 for key in missing_keys:
                     handle.write(f"{key} = {_render_value(_DEFAULT_SETTINGS[key])}\n")
+
+    template_path_value = _DEFAULT_SETTINGS["note_template_path"]
+    try:
+        file_config = _load_file_config(config_path)
+        if file_config.get("note_template_path"):
+            template_path_value = file_config["note_template_path"]
+    except OSError:
+        template_path_value = _DEFAULT_SETTINGS["note_template_path"]
+
+    template_path = Path(str(template_path_value)).expanduser()
+    if not template_path.exists():
+        template_path.parent.mkdir(parents=True, exist_ok=True)
+        source_template = _TEMPLATES_DIR / "note.md"
+        if not source_template.is_file():
+            raise FileNotFoundError(
+                f"Default template not found: {source_template}"
+            )
+        template_path.write_text(
+            source_template.read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
 
     return config_path.resolve()
