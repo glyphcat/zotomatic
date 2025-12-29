@@ -42,12 +42,33 @@ class PendingQueueProcessor:
         if due_entries:
             self._logger.info("Pending entries due: %s", len(due_entries))
         if due_entries and not self._zotero_resolver.is_enabled:
+            self._logger.info(
+                "Zotero disabled; generating notes without metadata."
+            )
             for entry in due_entries:
-                self._drop_permanent(
-                    entry.file_path,
-                    "Zotero settings missing (library_id/api_key)",
-                )
-            return 0
+                if self._stop_event and self._stop_event.is_set():
+                    break
+                pdf_path = Path(entry.file_path)
+                if not pdf_path.exists():
+                    self._drop_permanent(entry.file_path, "PDF not found")
+                    continue
+                if not self._is_pdf_readable(pdf_path):
+                    self._drop_permanent(entry.file_path, "PDF is unreadable")
+                    continue
+                try:
+                    self._on_resolved(pdf_path)
+                except Exception as exc:  # pragma: no cover - callback depends on caller
+                    self._backoff(
+                        entry.file_path,
+                        entry.attempt_count,
+                        str(exc),
+                        entry.attempt_count + 1,
+                    )
+                    continue
+                self._queue.resolve(entry.file_path)
+                processed += 1
+                self._logger.info("Pending entry resolved: %s", entry.file_path)
+            return processed
         for entry in due_entries:
             if self._stop_event and self._stop_event.is_set():
                 break

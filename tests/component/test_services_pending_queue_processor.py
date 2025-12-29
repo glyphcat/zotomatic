@@ -54,14 +54,21 @@ def _entry(path: Path, attempt_count: int = 0) -> PendingEntry:
     )
 
 
-def test_processor_drops_when_resolver_disabled(tmp_path: Path) -> None:
+def test_processor_runs_without_resolver_when_disabled(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     pdf_path = tmp_path / "a.pdf"
     pdf_path.write_text("x", encoding="utf-8")
     queue = FakeQueue(entries=[_entry(pdf_path)], resolved=[], updates=[])
     resolver = FakeResolver(is_enabled=False, result=None)
-    processor = PendingQueueProcessor(queue, resolver, lambda _p: None)
+    seen: list[Path] = []
+    processor = PendingQueueProcessor(queue, resolver, lambda p: seen.append(p))
+    monkeypatch.setattr(
+        PendingQueueProcessor, "_is_pdf_readable", lambda self, path: True
+    )
     processed = processor.run_once()
-    assert processed == 0
+    assert processed == 1
+    assert seen == [pdf_path]
     assert queue.resolved == [pdf_path]
 
 
