@@ -50,6 +50,9 @@ class PendingStore(ABC):
     def list_before(self, timestamp: int, limit: int = 50) -> list[PendingEntry]: ...
 
     @abstractmethod
+    def list_all(self, limit: int = 50) -> list[PendingEntry]: ...
+
+    @abstractmethod
     def count_all(self) -> int: ...
 
     @abstractmethod

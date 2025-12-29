@@ -217,6 +217,9 @@ def test_run_scan_watch_message(
         def count_all(self):
             return 0
 
+        def list_all(self, limit=10):
+            return []
+
     class DummyWatcher:
         def __init__(self, _config):
             self.skipped_by_state = 0
@@ -232,6 +235,7 @@ def test_run_scan_watch_message(
         loop_interval_seconds = 0
         skipped_unreadable = 0
         dropped_count = 0
+        dropped_paths = []
 
         def run_once(self):
             return 0

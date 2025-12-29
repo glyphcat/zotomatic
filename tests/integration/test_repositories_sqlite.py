@@ -65,6 +65,8 @@ def test_sqlite_pending_store(tmp_path: Path, sqlite_schema_path: Path) -> None:
     assert loaded.next_attempt_at == 2
     listed = store.list_before(timestamp=3)
     assert listed
+    assert store.count_all() == 1
+    assert store.list_all() == listed
     store.delete("/tmp/file.pdf")
     assert store.get("/tmp/file.pdf") is None
 

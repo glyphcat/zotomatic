@@ -113,6 +113,7 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
     updated_count = 0
     skipped_count = 0
     error_count = 0
+    error_paths: list[Path] = []
 
     def _process_pdf(pdf_path: Path) -> None:
         nonlocal created_count, updated_count, skipped_count
@@ -169,6 +170,7 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
             _process_pdf(pdf_path)
         except Exception:  # pragma: no cover - depends on downstream failures
             error_count += 1
+            error_paths.append(Path(pdf_path))
             logger.exception("Failed to process PDF: %s", pdf_path)
             raise
 
@@ -196,6 +198,13 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
             f"Summary: created={created_count}, updated={updated_count}, "
             f"skipped={skipped_count}, pending=0, dropped=0, errors={error_count}"
         )
+        if error_paths:
+            print("Errors:")
+            for path in error_paths[:10]:
+                print(f"  - {path}")
+            if len(error_paths) > 10:
+                print(f"  ... {len(error_paths) - 10} more")
+            print("Hint: retry specific PDFs with `zotomatic scan --path <path>`")
         if llm_client:
             llm_client.close()
         return 0
@@ -249,6 +258,7 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
     print(f"Scan started ({scan_mode_label}).")
     if not scan_once:
         print("Watching for new PDFs... (press Ctrl+C to stop)")
+    waiting_announced = False
     with PDFStorageWatcher(watcher_config) as watcher:
         logger.debug("Scan watcher running.")
         try:
@@ -264,21 +274,32 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
                         boot_seed_complete = True
                         logger.debug("Pending queue boot seed completed.")
 
-                processed = pending_processor.run_once()
-                if processed:
-                    logger.debug("Pending queue processed %s item(s).", processed)
-                if scan_once:
-                    no_due = not pending_queue.get_due(limit=1)
+                    processed = pending_processor.run_once()
+                    if processed:
+                        logger.debug("Pending queue processed %s item(s).", processed)
+                        waiting_announced = False
                     if (
-                        runtime_seed_complete
+                        not scan_once
+                        and runtime_seed_complete
                         and boot_seed_complete
                         and not pending_seed_buffer
-                        and no_due
+                        and not pending_queue.get_due(limit=1)
                     ):
-                        print("Scan completed.")
-                        break
-                    time.sleep(pending_processor.loop_interval_seconds)
-                    continue
+                        if not waiting_announced:
+                            print("Waiting for new PDFs...")
+                            waiting_announced = True
+                    if scan_once:
+                        no_due = not pending_queue.get_due(limit=1)
+                        if (
+                            runtime_seed_complete
+                            and boot_seed_complete
+                            and not pending_seed_buffer
+                            and no_due
+                        ):
+                            print("Scan completed.")
+                            break
+                        time.sleep(pending_processor.loop_interval_seconds)
+                        continue
                 if stop_event.wait(pending_processor.loop_interval_seconds):
                     break
         except KeyboardInterrupt:
@@ -296,6 +317,28 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
         f"skipped={total_skipped}, pending={pending_count}, "
         f"dropped={dropped_count}, errors={error_count}"
     )
+    pending_paths = pending_queue.list_all(limit=10)
+    dropped_paths = pending_processor.dropped_paths[:10]
+    if pending_paths:
+        print("Pending:")
+        for entry in pending_paths:
+            print(f"  - {entry.file_path}")
+        if pending_count > len(pending_paths):
+            print(f"  ... {pending_count - len(pending_paths)} more")
+    if dropped_paths:
+        print("Dropped:")
+        for path in dropped_paths:
+            print(f"  - {path}")
+        if dropped_count > len(dropped_paths):
+            print(f"  ... {dropped_count - len(dropped_paths)} more")
+    if error_paths:
+        print("Errors:")
+        for path in error_paths[:10]:
+            print(f"  - {path}")
+        if len(error_paths) > 10:
+            print(f"  ... {len(error_paths) - 10} more")
+    if pending_count or dropped_count or error_paths:
+        print("Hint: retry specific PDFs with `zotomatic scan --path <path>`")
 
     if llm_client:
         llm_client.close()

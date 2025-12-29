@@ -97,6 +97,33 @@ class SqlitePendingStore(SQLiteRepository, PendingStore):
             for row in rows
         ]
 
+    def list_all(self, limit: int = 50) -> list[PendingEntry]:
+        query = """
+            SELECT
+                file_path,
+                first_seen_at,
+                last_attempt_at,
+                next_attempt_at,
+                attempt_count,
+                last_error
+            FROM pending
+            ORDER BY next_attempt_at ASC
+            LIMIT ?
+        """
+        with self._connect() as conn:
+            rows = conn.execute(query, (limit,)).fetchall()
+        return [
+            PendingEntry(
+                file_path=Path(row["file_path"]),
+                first_seen_at=row["first_seen_at"],
+                last_attempt_at=row["last_attempt_at"],
+                next_attempt_at=row["next_attempt_at"],
+                attempt_count=row["attempt_count"],
+                last_error=row["last_error"],
+            )
+            for row in rows
+        ]
+
     def count_all(self) -> int:
         query = "SELECT COUNT(*) AS count FROM pending"
         with self._connect() as conn:

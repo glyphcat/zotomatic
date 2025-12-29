@@ -33,6 +33,7 @@ class PendingQueueProcessor:
         self._stop_event = stop_event
         self._skipped_unreadable = 0
         self._dropped_count = 0
+        self._dropped_paths: list[Path] = []
 
     def run_once(self, limit: int | None = None) -> int:
         """期限になったpendingを処理し、成功件数を返す。"""
@@ -129,6 +130,7 @@ class PendingQueueProcessor:
         if next_attempt > self._config.max_attempts:
             self._queue.resolve(file_path)
             self._dropped_count += 1
+            self._dropped_paths.append(Path(file_path))
             self._logger.warning(
                 "Pending entry dropped after max attempts: %s (%s)",
                 file_path,
@@ -157,6 +159,7 @@ class PendingQueueProcessor:
     def _drop_permanent(self, file_path: str | Path, reason: str) -> None:
         self._queue.resolve(file_path)
         self._dropped_count += 1
+        self._dropped_paths.append(Path(file_path))
         if reason == "PDF is unreadable":
             self._skipped_unreadable += 1
         self._logger.warning("Pending entry dropped: %s (%s)", file_path, reason)
@@ -182,3 +185,7 @@ class PendingQueueProcessor:
     @property
     def dropped_count(self) -> int:
         return self._dropped_count
+
+    @property
+    def dropped_paths(self) -> list[Path]:
+        return list(self._dropped_paths)
