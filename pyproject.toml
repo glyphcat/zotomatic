@@ -1,7 +1,7 @@
 [project]
 name = "zotomatic"
 version = "0.1.0"
-description = "Watch Zotero Connector PDFs and auto-generate Obsidian-friendly Markdown notes."
+description = "A CLI tool that generates Markdown notes from PDFs using customizable templates and optional Zotero metadata."
 readme = "README.md"
 license = { file = "LICENSE" }
 authors = [
