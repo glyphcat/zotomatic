@@ -1,8 +1,9 @@
 [project]
 name = "zotomatic"
 version = "0.1.0"
-description = "Add your description here"
+description = "Watch Zotero Connector PDFs and auto-generate Obsidian-friendly Markdown notes."
 readme = "README.md"
+license = { file = "LICENSE" }
 authors = [
     { name = "glyphcat", email = "glyphcat13@gmail.com" }
 ]
@@ -14,6 +15,21 @@ dependencies = [
     "pyzotero>=1.6.16",
     "watchfiles>=1.1.0",
 ]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Source = "https://github.com/glyphcat/zotomatic"
+Issues = "https://github.com/glyphcat/zotomatic/issues"
+Documentation = "https://github.com/glyphcat/zotomatic#readme"
 
 [project.scripts]
 zotomatic = "zotomatic.cli:main"
