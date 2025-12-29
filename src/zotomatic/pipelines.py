@@ -220,6 +220,7 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
     boot_seed_complete = state_repository.meta.get("boot_seed_complete") == "1"
     initial_scan_announced = False
     initial_processing_announced = False
+    initial_scan_started_at = time.perf_counter()
     stop_event = threading.Event()
 
     def _on_pdf_created(pdf_path):
@@ -236,8 +237,10 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
         nonlocal initial_scan_announced
         runtime_seed_complete = True
         if not scan_once and not initial_scan_announced:
+            elapsed = time.perf_counter() - initial_scan_started_at
             print(
-                "Initial scan complete. Processing queued PDFs... (press Ctrl+C to stop)"
+                "Initial scan complete in "
+                f"{elapsed:.2f}s. Processing queued PDFs... (press Ctrl+C to stop)"
             )
             initial_scan_announced = True
 
