@@ -62,7 +62,7 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
     if scan_paths and scan_force:
         raise ZotomaticCLIError("--force cannot be used with --path")
     if not scan_paths and not scan_once and not scan_watch:
-        scan_watch = True
+        scan_once = True
     scan_mode = "path" if scan_paths else ("once" if scan_once else "watch")
     scan_mode_label = scan_mode
     if scan_force and scan_mode in {"once", "watch"}:
