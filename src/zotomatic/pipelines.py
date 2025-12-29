@@ -219,6 +219,7 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
     runtime_seed_complete = False
     boot_seed_complete = state_repository.meta.get("boot_seed_complete") == "1"
     initial_scan_announced = False
+    initial_processing_announced = False
     stop_event = threading.Event()
 
     def _on_pdf_created(pdf_path):
@@ -235,7 +236,9 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
         nonlocal initial_scan_announced
         runtime_seed_complete = True
         if not scan_once and not initial_scan_announced:
-            print("Initial scan complete. Waiting for new PDFs... (press Ctrl+C to stop)")
+            print(
+                "Initial scan complete. Processing queued PDFs... (press Ctrl+C to stop)"
+            )
             initial_scan_announced = True
 
     # watcherコンテキストの生成
@@ -288,7 +291,12 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
                     and not pending_seed_buffer
                     and not pending_queue.get_due(limit=1)
                 ):
-                    if not waiting_announced:
+                    if not initial_processing_announced:
+                        print("Initial processing complete.")
+                        initial_processing_announced = True
+                        print("Waiting for new PDFs...")
+                        waiting_announced = True
+                    elif not waiting_announced:
                         print("Waiting for new PDFs...")
                         waiting_announced = True
                 if scan_once:

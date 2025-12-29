@@ -277,9 +277,11 @@ def test_run_scan_watch_message(
     pipelines.run_scan({"watch": True})
     captured = capsys.readouterr()
     assert (
-        "Initial scan complete. Waiting for new PDFs... (press Ctrl+C to stop)"
+        "Initial scan complete. Processing queued PDFs... (press Ctrl+C to stop)"
         in captured.out
     )
+    assert "Initial processing complete." in captured.out
+    assert "Waiting for new PDFs..." in captured.out
     assert dummy_processor.call_count >= 1
 
 
