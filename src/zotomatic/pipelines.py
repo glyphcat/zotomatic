@@ -473,6 +473,33 @@ def run_doctor(cli_options: Mapping[str, Any] | None = None):
     return 0
 
 
+def run_config_show(cli_options: Mapping[str, Any] | None = None):
+    settings = config.get_config_with_sources(cli_options)
+    exclusions = config.config_show_exclusions()
+    visible_items = {
+        k: v for k, v in settings.items() if k not in exclusions
+    }
+    if not visible_items:
+        print("No configurable settings available.")
+        return 0
+    width = max(len(key) for key in visible_items)
+    rendered = {
+        key: config.render_value(value) for key, (value, _source) in visible_items.items()
+    }
+    value_width = max(len(value) for value in rendered.values())
+    print("Effective configuration:")
+    for key in sorted(visible_items):
+        padded = key.ljust(width)
+        value, source = visible_items[key]
+        suffix = "default" if source == "default" else ""
+        value_str = rendered[key].ljust(value_width)
+        if suffix:
+            print(f"  {padded} = {value_str}  ({suffix})")
+        else:
+            print(f"  {padded} = {value_str}")
+    return 0
+
+
 def run_template_create(cli_options: Mapping[str, Any] | None = None):
     logger = get_logger("zotomatic.template", False)
     cli_options = dict(cli_options or {})

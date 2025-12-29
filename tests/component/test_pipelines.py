@@ -10,12 +10,16 @@ from zotomatic.errors import ZotomaticCLIError
 from zotomatic.repositories.types import WatcherStateRepositoryConfig
 
 
-def test_run_template_create(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+def test_run_template_create(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
     config_path = tmp_path / "config.toml"
     template_path = tmp_path / "note.md"
 
+    monkeypatch.setattr(pipelines.config, "_DEFAULT_CONFIG", config_path)
+
     pipelines.run_template_create(
-        {"template_path": str(template_path), "config_path": str(config_path)}
+        {"template_path": str(template_path)}
     )
 
     assert template_path.exists()
@@ -26,13 +30,17 @@ def test_run_template_create(tmp_path: Path, capsys: pytest.CaptureFixture[str])
     assert "Template" in captured.out
 
 
-def test_run_template_set(tmp_path: Path) -> None:
+def test_run_template_set(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     config_path = tmp_path / "config.toml"
     template_path = tmp_path / "note.md"
     template_path.write_text("x", encoding="utf-8")
 
+    monkeypatch.setattr(pipelines.config, "_DEFAULT_CONFIG", config_path)
+
     pipelines.run_template_set(
-        {"template_path": str(template_path), "config_path": str(config_path)}
+        {"template_path": str(template_path)}
     )
 
     text = config_path.read_text(encoding="utf-8")
@@ -73,6 +81,7 @@ def test_run_init(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytes
     config_path = tmp_path / "config.toml"
     template_path = tmp_path / "note.md"
     db_path = tmp_path / "state.db"
+    monkeypatch.setattr(pipelines.config, "_DEFAULT_CONFIG", config_path)
 
     monkeypatch.setattr(
         pipelines.WatcherStateRepositoryConfig,
@@ -86,7 +95,6 @@ def test_run_init(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytes
             "pdf_dir": str(tmp_path / "pdfs"),
             "note_dir": str(tmp_path / "notes"),
             "template_path": str(template_path),
-            "config_path": str(config_path),
         }
     )
 
@@ -185,3 +193,34 @@ def test_run_scan_path_invalid(
     with pytest.raises(ZotomaticCLIError) as excinfo:
         pipelines.run_scan({"path": [str(missing)]})
     assert "Invalid PDF path(s)" in str(excinfo.value)
+
+
+def test_run_config_show_filters_internal_keys(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    settings = {
+        "note_dir": ("/notes", "default"),
+        "pdf_dir": ("/pdfs", "file"),
+        "llm_openai_model": ("ignored", "fixed"),
+        "config_path": ("/fixed/config.toml", "fixed"),
+        "watch_verbose_logging": (True, "fixed"),
+    }
+
+    monkeypatch.setattr(
+        pipelines.config, "get_config_with_sources", lambda _opts: settings
+    )
+    monkeypatch.setattr(
+        pipelines.config,
+        "config_show_exclusions",
+        lambda: {"llm_openai_model", "config_path", "watch_verbose_logging"},
+    )
+
+    result = pipelines.run_config_show({})
+    assert result == 0
+    captured = capsys.readouterr()
+    assert "note_dir =" in captured.out
+    assert "(default)" in captured.out
+    assert "pdf_dir" in captured.out
+    assert "llm_openai_model" not in captured.out
+    assert "config_path" not in captured.out
+    assert "watch_verbose_logging" not in captured.out

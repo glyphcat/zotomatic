@@ -61,6 +61,15 @@ _DEFAULT_SETTINGS: dict[str, Any] = {
     "template_path": _DEFAULT_TEMPLATE_PATH,
     "watch_verbose_logging": False,
 }
+_INTERNAL_FIXED_SETTINGS = {
+    "pdf_alias_prefix",
+    "llm_provider",
+    "llm_openai_model",
+    "llm_openai_base_url",
+    "llm_input_char_limit",
+    "watch_verbose_logging",
+}
+_CONFIG_SHOW_EXCLUDE_SETTINGS = _INTERNAL_FIXED_SETTINGS | {"config_path"}
 
 
 def _render_value(value: Any) -> str:
@@ -73,6 +82,14 @@ def _render_value(value: Any) -> str:
         return f'"""{escaped}"""'
     escaped = str(value).replace('"', '"')
     return f'"{escaped}"'
+
+
+def render_value(value: Any) -> str:
+    return _render_value(value)
+
+
+def config_show_exclusions() -> set[str]:
+    return set(_CONFIG_SHOW_EXCLUDE_SETTINGS)
 
 
 def _build_default_config_template(settings: Mapping[str, Any]) -> str:
@@ -128,10 +145,8 @@ def _coerce_env_value(key: str, value: str) -> Any:
     return value
 
 
-def _resolve_config_path(cli_options: Mapping[str, Any] | None) -> Path:
-    cli_options = dict(cli_options or {})
-    raw_config_path = cli_options.get("config_path")
-    return Path(raw_config_path).expanduser() if raw_config_path else _DEFAULT_CONFIG
+def _resolve_config_path(_cli_options: Mapping[str, Any] | None) -> Path:
+    return _DEFAULT_CONFIG
 
 
 def update_config_value(config_path: Path, key: str, value: Any) -> bool:
@@ -178,7 +193,9 @@ def _load_env_config() -> dict[str, Any]:
     return config
 
 
-def get_config(cli_options: Mapping[str, Any] | None = None) -> dict[str, Any]:
+def get_config_with_sources(
+    cli_options: Mapping[str, Any] | None = None,
+) -> dict[str, tuple[Any, str]]:
     cli_options = dict(cli_options or {})
     config_path = _resolve_config_path(cli_options)
 
@@ -191,22 +208,29 @@ def get_config(cli_options: Mapping[str, Any] | None = None) -> dict[str, Any]:
     }
 
     merged: dict[str, Any] = dict(_DEFAULT_SETTINGS)
-    merged.update(file_config)
-    merged.update(env_config)
-    merged.update(cli_config)
+    sources: dict[str, str] = {key: "default" for key in merged}
+    for key, value in file_config.items():
+        merged[key] = value
+        sources[key] = "file"
+    for key, value in env_config.items():
+        merged[key] = value
+        sources[key] = "env"
+    for key, value in cli_config.items():
+        merged[key] = value
+        sources[key] = "cli"
 
-    for key in (
-        "pdf_alias_prefix",
-        "llm_provider",
-        "llm_openai_model",
-        "llm_openai_base_url",
-        "llm_input_char_limit",
-        "watch_verbose_logging",
-    ):
+    for key in _INTERNAL_FIXED_SETTINGS:
         merged[key] = _DEFAULT_SETTINGS[key]
+        sources[key] = "fixed"
 
     merged["config_path"] = str(config_path)
-    return merged
+    sources["config_path"] = "fixed"
+    return {key: (merged[key], sources.get(key, "default")) for key in merged}
+
+
+def get_config(cli_options: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    merged = get_config_with_sources(cli_options)
+    return {key: value for key, (value, _source) in merged.items()}
 
 
 @dataclass(slots=True)

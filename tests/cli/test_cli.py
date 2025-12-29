@@ -34,6 +34,17 @@ def test_cli_dispatch_template_create(monkeypatch: pytest.MonkeyPatch) -> None:
     assert called["options"]["template_path"] == "/tmp/tpl.md"
 
 
+def test_cli_dispatch_config_show(monkeypatch: pytest.MonkeyPatch) -> None:
+    called = {}
+
+    def fake_run_config_show(options):
+        called["options"] = options
+
+    monkeypatch.setattr(cli.pipelines, "run_config_show", fake_run_config_show)
+    cli.main(["config", "show"])
+    assert called["options"] == {}
+
+
 def test_cli_error_handling(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
     def fake_run_scan(_options):
         raise ZotomaticError("boom", hint="fix")

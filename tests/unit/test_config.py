@@ -29,10 +29,10 @@ def test_initialize_config_creates_files(tmp_path: Path, monkeypatch: pytest.Mon
     monkeypatch.setattr(config, "_TEMPLATES_DIR", templates_dir)
 
     cfg_path = tmp_path / "config.toml"
+    monkeypatch.setattr(config, "_DEFAULT_CONFIG", cfg_path)
     template_target = tmp_path / "note.md"
     result = config.initialize_config(
         {
-            "config_path": str(cfg_path),
             "template_path": str(template_target),
             "note_dir": str(tmp_path / "notes"),
             "pdf_dir": str(tmp_path / "pdfs"),
@@ -48,10 +48,11 @@ def test_initialize_config_creates_files(tmp_path: Path, monkeypatch: pytest.Mon
 def test_get_config_merges_sources(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     cfg_path = tmp_path / "config.toml"
     cfg_path.write_text("note_dir = \"/file\"\n", encoding="utf-8")
+    monkeypatch.setattr(config, "_DEFAULT_CONFIG", cfg_path)
     monkeypatch.setenv("ZOTOMATIC_NOTE_DIR", "/env")
     monkeypatch.setenv("ZOTOMATIC_LLM_OPENAI_BASE_URL", "http://example.com")
 
-    merged = config.get_config({"config_path": str(cfg_path), "note_dir": "/cli"})
+    merged = config.get_config({"note_dir": "/cli"})
     assert merged["note_dir"] == "/cli"
     assert merged["llm_openai_base_url"] == config._DEFAULT_SETTINGS["llm_openai_base_url"]
     assert merged["config_path"] == str(cfg_path)

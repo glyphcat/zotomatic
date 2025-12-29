@@ -54,6 +54,13 @@ def _build_parser() -> argparse.ArgumentParser:
         nargs="+",
         help="Generate notes for specific PDF paths (processed in order) and exit",
     )
+    config_parser = subparsers.add_parser(
+        "config", help="Show effective configuration values"
+    )
+    config_subparsers = config_parser.add_subparsers(
+        dest="config_command", required=True
+    )
+    config_subparsers.add_parser("show", help="Show effective configuration values")
     subparsers.add_parser("doctor", help="Inspect project health")
     init = subparsers.add_parser(
         "init", help="Initialize a Zotomatic workspace"
@@ -104,6 +111,7 @@ def _print_help() -> None:
     print("")
     print("Commands:")
     print("  scan                  Scan for PDFs and generate notes")
+    print("  config show           Show effective configuration values")
     print("  doctor                Inspect project health")
     print("  init                  Initialize a Zotomatic workspace")
     print("  template create       Create a template and update config")
@@ -129,7 +137,7 @@ def _normalize_cli_options(namespace: argparse.Namespace) -> dict[str, Any]:
     cli_options = {
         key: value
         for key, value in vars(namespace).items()
-        if key not in {"command", "template_command"}
+        if key not in {"command", "template_command", "config_command"}
     }
     return {key: value for key, value in cli_options.items() if value is not None}
 
@@ -148,6 +156,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         "doctor": pipelines.run_doctor,
         "init": pipelines.run_init,
         "template": None,
+        "config": None,
     }
 
     command = args.command
@@ -163,6 +172,15 @@ def main(argv: Sequence[str] | None = None) -> None:
             else:  # pragma: no cover - argparse enforces choices
                 raise ZotomaticCLIError(
                     f"Unknown template command: {template_command}"
+                )
+            return
+        if command == "config":
+            config_command = args.config_command
+            if config_command == "show":
+                pipelines.run_config_show(cli_options)
+            else:  # pragma: no cover - argparse enforces choices
+                raise ZotomaticCLIError(
+                    f"Unknown config command: {config_command}"
                 )
             return
 
