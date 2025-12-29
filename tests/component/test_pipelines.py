@@ -224,3 +224,33 @@ def test_run_config_show_filters_internal_keys(
     assert "llm_openai_model" not in captured.out
     assert "config_path" not in captured.out
     assert "watch_verbose_logging" not in captured.out
+
+
+def test_run_config_default(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    templates_dir = tmp_path / "templates"
+    templates_dir.mkdir()
+    source_template = templates_dir / "note.md"
+    source_template.write_text("Template", encoding="utf-8")
+
+    cfg_path = tmp_path / "config.toml"
+    cfg_path.write_text("note_dir = \"/custom\"\n", encoding="utf-8")
+    template_target = tmp_path / "note.md"
+
+    monkeypatch.setattr(pipelines.config, "_TEMPLATES_DIR", templates_dir)
+    monkeypatch.setattr(pipelines.config, "_DEFAULT_CONFIG", cfg_path)
+    monkeypatch.setitem(
+        pipelines.config._DEFAULT_SETTINGS, "template_path", str(template_target)
+    )
+
+    result = pipelines.run_config_default({})
+    assert result == 0
+    captured = capsys.readouterr()
+    assert "Config: reset to defaults" in captured.out
+    assert "Config: backup created" in captured.out
+    assert "Template:" in captured.out
+    assert cfg_path.exists()
+    assert cfg_path.with_name("config.toml.bak").exists()

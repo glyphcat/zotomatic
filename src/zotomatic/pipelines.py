@@ -500,6 +500,19 @@ def run_config_show(cli_options: Mapping[str, Any] | None = None):
     return 0
 
 
+def run_config_default(cli_options: Mapping[str, Any] | None = None):
+    _ = cli_options
+    result = config.reset_config_to_defaults()
+    print(f"Config: reset to defaults at {result.config_path}")
+    if result.backup_path:
+        print(f"Config: backup created at {result.backup_path}")
+    if result.template_created:
+        print(f"Template: created {result.template_path}")
+    else:
+        print(f"Template: exists {result.template_path}")
+    return 0
+
+
 def run_template_create(cli_options: Mapping[str, Any] | None = None):
     logger = get_logger("zotomatic.template", False)
     cli_options = dict(cli_options or {})

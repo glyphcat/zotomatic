@@ -55,12 +55,13 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Generate notes for specific PDF paths (processed in order) and exit",
     )
     config_parser = subparsers.add_parser(
-        "config", help="Show effective configuration values"
+        "config", help="Manage configuration values"
     )
     config_subparsers = config_parser.add_subparsers(
         dest="config_command", required=True
     )
     config_subparsers.add_parser("show", help="Show effective configuration values")
+    config_subparsers.add_parser("default", help="Reset config to defaults")
     subparsers.add_parser("doctor", help="Inspect project health")
     init = subparsers.add_parser(
         "init", help="Initialize a Zotomatic workspace"
@@ -112,6 +113,7 @@ def _print_help() -> None:
     print("Commands:")
     print("  scan                  Scan for PDFs and generate notes")
     print("  config show           Show effective configuration values")
+    print("  config default        Reset config to defaults")
     print("  doctor                Inspect project health")
     print("  init                  Initialize a Zotomatic workspace")
     print("  template create       Create a template and update config")
@@ -178,6 +180,8 @@ def main(argv: Sequence[str] | None = None) -> None:
             config_command = args.config_command
             if config_command == "show":
                 pipelines.run_config_show(cli_options)
+            elif config_command == "default":
+                pipelines.run_config_default(cli_options)
             else:  # pragma: no cover - argparse enforces choices
                 raise ZotomaticCLIError(
                     f"Unknown config command: {config_command}"

@@ -61,3 +61,30 @@ def test_get_config_merges_sources(tmp_path: Path, monkeypatch: pytest.MonkeyPat
 def test_default_config_path_is_path() -> None:
     path = config._default_config_path()
     assert isinstance(path, Path)
+
+
+def test_reset_config_to_defaults_creates_backup(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    templates_dir = tmp_path / "templates"
+    templates_dir.mkdir()
+    source_template = templates_dir / "note.md"
+    source_template.write_text("Template", encoding="utf-8")
+    monkeypatch.setattr(config, "_TEMPLATES_DIR", templates_dir)
+
+    cfg_path = tmp_path / "config.toml"
+    cfg_path.write_text("note_dir = \"/custom\"\n", encoding="utf-8")
+    template_target = tmp_path / "note.md"
+
+    monkeypatch.setattr(config, "_DEFAULT_CONFIG", cfg_path)
+    monkeypatch.setitem(
+        config._DEFAULT_SETTINGS, "template_path", str(template_target)
+    )
+
+    result = config.reset_config_to_defaults()
+    assert result.config_path == cfg_path
+    assert result.backup_path == cfg_path.with_name("config.toml.bak")
+    assert result.backup_path.exists()
+    assert "note_dir" in cfg_path.read_text(encoding="utf-8")
+    assert result.template_path == template_target
+    assert template_target.exists()

@@ -242,6 +242,14 @@ class InitResult:
     template_created: bool
 
 
+@dataclass(slots=True)
+class ResetResult:
+    config_path: Path
+    backup_path: Path | None
+    template_path: Path
+    template_created: bool
+
+
 def initialize_config(cli_options: Mapping[str, Any] | None = None) -> InitResult:
     config_path = _resolve_config_path(cli_options)
     config_path.parent.mkdir(parents=True, exist_ok=True)
@@ -300,6 +308,45 @@ def initialize_config(cli_options: Mapping[str, Any] | None = None) -> InitResul
         config_path=config_path.resolve(),
         config_created=config_created,
         config_updated_keys=config_updated_keys,
+        template_path=template_path.resolve(),
+        template_created=template_created,
+    )
+
+
+def reset_config_to_defaults() -> ResetResult:
+    config_path = _DEFAULT_CONFIG
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+
+    backup_path: Path | None = None
+    if config_path.exists():
+        backup_path = config_path.with_name(config_path.name + ".bak")
+        backup_path.write_text(
+            config_path.read_text(encoding="utf-8"), encoding="utf-8"
+        )
+
+    config_path.write_text(
+        _build_default_config_template(_DEFAULT_SETTINGS), encoding="utf-8"
+    )
+
+    template_path = Path(str(_DEFAULT_SETTINGS["template_path"])).expanduser()
+    template_created = False
+    if not template_path.exists():
+        template_path.parent.mkdir(parents=True, exist_ok=True)
+        source_template = _TEMPLATES_DIR / "note.md"
+        if not source_template.is_file():
+            raise ZotomaticConfigError(
+                f"Default template not found: {source_template}",
+                hint="Reinstall Zotomatic or restore the default template file.",
+            )
+        template_path.write_text(
+            source_template.read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
+        template_created = True
+
+    return ResetResult(
+        config_path=config_path.resolve(),
+        backup_path=backup_path.resolve() if backup_path else None,
         template_path=template_path.resolve(),
         template_created=template_created,
     )

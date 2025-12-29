@@ -45,6 +45,17 @@ def test_cli_dispatch_config_show(monkeypatch: pytest.MonkeyPatch) -> None:
     assert called["options"] == {}
 
 
+def test_cli_dispatch_config_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    called = {}
+
+    def fake_run_config_default(options):
+        called["options"] = options
+
+    monkeypatch.setattr(cli.pipelines, "run_config_default", fake_run_config_default)
+    cli.main(["config", "default"])
+    assert called["options"] == {}
+
+
 def test_cli_error_handling(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
     def fake_run_scan(_options):
         raise ZotomaticError("boom", hint="fix")
