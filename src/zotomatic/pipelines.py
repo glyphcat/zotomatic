@@ -274,32 +274,32 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
                         boot_seed_complete = True
                         logger.debug("Pending queue boot seed completed.")
 
-                    processed = pending_processor.run_once()
-                    if processed:
-                        logger.debug("Pending queue processed %s item(s).", processed)
-                        waiting_announced = False
+                processed = pending_processor.run_once()
+                if processed:
+                    logger.debug("Pending queue processed %s item(s).", processed)
+                    waiting_announced = False
+                if (
+                    not scan_once
+                    and runtime_seed_complete
+                    and boot_seed_complete
+                    and not pending_seed_buffer
+                    and not pending_queue.get_due(limit=1)
+                ):
+                    if not waiting_announced:
+                        print("Waiting for new PDFs...")
+                        waiting_announced = True
+                if scan_once:
+                    no_due = not pending_queue.get_due(limit=1)
                     if (
-                        not scan_once
-                        and runtime_seed_complete
+                        runtime_seed_complete
                         and boot_seed_complete
                         and not pending_seed_buffer
-                        and not pending_queue.get_due(limit=1)
+                        and no_due
                     ):
-                        if not waiting_announced:
-                            print("Waiting for new PDFs...")
-                            waiting_announced = True
-                    if scan_once:
-                        no_due = not pending_queue.get_due(limit=1)
-                        if (
-                            runtime_seed_complete
-                            and boot_seed_complete
-                            and not pending_seed_buffer
-                            and no_due
-                        ):
-                            print("Scan completed.")
-                            break
-                        time.sleep(pending_processor.loop_interval_seconds)
-                        continue
+                        print("Scan completed.")
+                        break
+                    time.sleep(pending_processor.loop_interval_seconds)
+                    continue
                 if stop_event.wait(pending_processor.loop_interval_seconds):
                     break
         except KeyboardInterrupt:

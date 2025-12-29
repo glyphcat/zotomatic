@@ -195,7 +195,7 @@ def test_run_scan_watch_message(
 
     class DummyMeta:
         def get(self, _key: str):
-            return "1"
+            return None
 
         def set(self, _key: str, _value: str) -> None:
             return None
@@ -236,13 +236,16 @@ def test_run_scan_watch_message(
         skipped_unreadable = 0
         dropped_count = 0
         dropped_paths = []
+        call_count = 0
 
         def run_once(self):
+            self.call_count += 1
             return 0
 
     monkeypatch.setattr(pipelines, "PDFStorageWatcher", DummyWatcher)
+    dummy_processor = DummyPendingProcessor()
     monkeypatch.setattr(
-        pipelines, "PendingQueueProcessor", lambda *args, **kwargs: DummyPendingProcessor()
+        pipelines, "PendingQueueProcessor", lambda *args, **kwargs: dummy_processor
     )
     monkeypatch.setattr(
         pipelines.PendingQueue, "from_state_repository", lambda _state: DummyPendingQueue()
@@ -272,6 +275,7 @@ def test_run_scan_watch_message(
     pipelines.run_scan({"watch": True})
     captured = capsys.readouterr()
     assert "Watching for new PDFs... (press Ctrl+C to stop)" in captured.out
+    assert dummy_processor.call_count >= 1
 
 
 def test_run_scan_path_invalid(
