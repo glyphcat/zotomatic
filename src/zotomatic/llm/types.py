@@ -33,7 +33,8 @@ class LLMClientConfig:
             raise ZotomaticLLMConfigError(
                 "`llm_openai_api_key` must be configured before using the LLM client.",
                 hint=(
-                    "Set `llm_openai_api_key` in ~/.zotomatic/config.toml or export "
+                    f"Set `llm_openai_api_key` in "
+                    f"{Path('~/.zotomatic/config.toml').expanduser()} or export "
                     "ZOTOMATIC_LLM_OPENAI_API_KEY."
                 ),
             )

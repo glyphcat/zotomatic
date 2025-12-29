@@ -1,6 +1,8 @@
 # src/zotomatic/errors.py
 from __future__ import annotations
 
+from pathlib import Path
+
 
 class ZotomaticError(Exception):
     """Base exception for all zotomatic errors."""
@@ -25,8 +27,8 @@ class ZotomaticMissingSettingError(ZotomaticConfigError):
     ) -> None:
         detail = message or f"Missing required setting: {setting_name}"
         hint = hint or (
-            f"Set `{setting_name}` in ~/.zotomatic/config.toml or export "
-            f"ZOTOMATIC_{setting_name.upper()}."
+            f"Set `{setting_name}` in {Path('~/.zotomatic/config.toml').expanduser()} "
+            f"or export ZOTOMATIC_{setting_name.upper()}."
         )
         super().__init__(detail, hint=hint)
         self.setting_name = setting_name

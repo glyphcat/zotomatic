@@ -63,6 +63,13 @@ def test_default_config_path_is_path() -> None:
     assert isinstance(path, Path)
 
 
+def test_default_paths_are_absolute() -> None:
+    note_dir = Path(config._DEFAULT_SETTINGS["note_dir"])
+    template_path = Path(config._DEFAULT_SETTINGS["template_path"])
+    assert note_dir.is_absolute()
+    assert template_path.is_absolute()
+
+
 def test_reset_config_to_defaults_creates_backup(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
