@@ -41,11 +41,33 @@
 - 条件付き必須: 特定機能を使う場合のみ必要
 - 任意: 上書きしない限りデフォルトで動作
 
-## 文字エンコーディングについて
+### config.toml 例
+
+```toml
+llm_openai_api_key = "sk-..."
+pdf_dir = "~/Zotero/storage"
+note_dir = "~/Documents/Obsidian/Zotomatic"
+note_title_pattern = "{{ year }}-{{ slug80 }}-{{ citekey }}"
+template_path = "~/Zotomatic/templates/note.md"
+```
+
+### 環境変数
+
+上記の環境変数キーのみを受け付けます。接頭辞を除去して小文字化したものが設定キーになります。
+
+例:
+
+```bash
+export ZOTOMATIC_LLM_OPENAI_API_KEY=...
+```
+
+注意: `notes_encoding` / `llm_timeout` は `config.toml` での指定を推奨します。
+
+## `notes_encoding` (出力文字エンコーディング) について
 
 `notes_encoding` は指定可能ですが上級者向けです。基本は `utf-8` を推奨します。
 
-## LLM 出力言語について
+## `llm_output_language` (LLM 出力言語) について
 
 `llm_output_language` はプロンプトに指定言語を埋め込むだけの設定です。各言語の出力品質や正確性を保証するものではありません。
 
@@ -68,24 +90,35 @@
 | `tr` | Türkçe |
 | `zh` | 中文 |
 
-## 環境変数
+## `note_title_pattern` (ノート名テンプレート) について
 
-上記の環境変数キーのみを受け付けます。接頭辞を除去して小文字化したものが設定キーになります。
+`note_title_pattern` は `{{ key }}` 形式のプレースホルダーを使ってファイル名を組み立てます。値が空の場合は空文字になります。拡張子が指定されていない場合は `.md` が付与され、ファイル名は安全な文字に置き換えられます。
 
-例:
+### 使用できるプレースホルダー
 
-```bash
-export ZOTOMATIC_LLM_OPENAI_API_KEY=...
-```
+| プレースホルダー | 説明 |
+| --- | --- |
+| `title` | 論文タイトル。Zotero 由来のタイトル、または PDF 名から補完された値。 |
+| `citekey` | Zotero の citekey。無い場合は空。 |
+| `year` | 年。 |
+| `authors` | 著者文字列。 |
+| `venue` | 出版元 (ジャーナル/会議名)。 |
+| `doi` | DOI。 |
+| `url` | URL。 |
+| `source_url` | Zotero 由来の派生 URL。 |
+| `zotero_select_uri` | Zotero の選択 URI。 |
+| `pdf_path` | PDF のパス。 |
+| `tags` | タグ文字列 (カンマ区切り)。 |
+| `tags_list` | タグのリストを文字列化した値。 |
+| `abstract` | アブストラクト。 |
+| `zotero_abstract` | Zotero 由来のアブストラクト (実質 `abstract` と同等)。 |
+| `generated_summary` | LLM 要約 (有効時のみ)。 |
+| `highlights` | ハイライト。 |
+| `zotero_highlights` | Zotero 注釈由来のハイライト。 |
+| `zotomatic_summary_status` | 要約ステータス (`pending` など)。 |
+| `zotomatic_summary_mode` | 要約モード (`quick` / `standard` / `deep`)。 |
+| `zotomatic_tag_status` | タグステータス (`pending` など)。 |
+| `zotomatic_last_updated` | 最終更新日時 (ISO 8601)。 |
+| `slug80` | `title` / `citekey` / `year` から生成する 80 文字のスラッグ。 |
+| `slug40` | `title` / `citekey` / `year` から生成する 40 文字のスラッグ。 |
 
-注意: `notes_encoding` / `llm_timeout` は `config.toml` での指定を推奨します。
-
-## 例
-
-```toml
-llm_openai_api_key = "sk-..."
-pdf_dir = "~/Zotero/storage"
-note_dir = "~/Documents/Obsidian/Zotomatic"
-note_title_pattern = "{{ year }}-{{ slug80 }}-{{ citekey }}"
-template_path = "~/Zotomatic/templates/note.md"
-```
