@@ -95,6 +95,31 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
         daily_limit=settings.get("llm_daily_limit"),
         logger=logger,
     )
+    llm_limit_notified = False
+
+    def _notify_llm_limit_reached() -> None:
+        nonlocal llm_limit_notified
+        if llm_limit_notified:
+            return
+        if not llm_client or not (summary_enabled or tag_enabled):
+            return
+        limit = llm_usage.daily_limit
+        if not limit or limit <= 0:
+            return
+        used = llm_usage.get_total_used()
+        if used >= limit:
+            print(
+                "LLM daily limit reached; summaries/tags will be skipped for remaining PDFs."
+            )
+            llm_limit_notified = True
+
+    def _should_note_llm_limit() -> bool:
+        if not llm_client or not (summary_enabled or tag_enabled):
+            return False
+        limit = llm_usage.daily_limit
+        if not limit or limit <= 0:
+            return False
+        return llm_usage.get_total_used() >= limit
 
     note_workflow = NoteWorkflow(
         note_builder=note_builder,
@@ -136,6 +161,7 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
                     )
                 ):
                     updated_count += 1
+                    _notify_llm_limit_reached()
                     return
                 if note_workflow.update_pending_note(
                     NoteWorkflowContext(
@@ -144,6 +170,7 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
                     )
                 ):
                     updated_count += 1
+                    _notify_llm_limit_reached()
                     return
                 logger.debug(
                     "Note already exists (citekey=%s): %s; skipping.",
@@ -163,6 +190,9 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
             print(f"Note created: {note.path}")
         else:
             print(f"Note created: {note.path}")
+        _notify_llm_limit_reached()
+
+    _notify_llm_limit_reached()
 
     def _process_pdf_safe(pdf_path: Path) -> None:
         nonlocal error_count
@@ -198,6 +228,10 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
             f"Summary: created={created_count}, updated={updated_count}, "
             f"skipped={skipped_count}, pending=0, dropped=0, errors={error_count}"
         )
+        if _should_note_llm_limit():
+            print(
+                "Note: LLM daily limit reached today; summaries/tags may be pending."
+            )
         if error_paths:
             print("Errors:")
             for path in error_paths[:10]:
@@ -356,6 +390,8 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
         print(
             f"Note: {skipped_by_state} PDFs were unchanged (no processing needed)."
         )
+    if _should_note_llm_limit():
+        print("Note: LLM daily limit reached today; summaries/tags may be pending.")
 
     if llm_client:
         llm_client.close()
