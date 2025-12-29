@@ -218,6 +218,7 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
     pending_seed_lock = threading.Lock()
     runtime_seed_complete = False
     boot_seed_complete = state_repository.meta.get("boot_seed_complete") == "1"
+    initial_scan_announced = False
     stop_event = threading.Event()
 
     def _on_pdf_created(pdf_path):
@@ -231,7 +232,11 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
 
     def _on_initial_scan_complete() -> None:
         nonlocal runtime_seed_complete
+        nonlocal initial_scan_announced
         runtime_seed_complete = True
+        if not scan_once and not initial_scan_announced:
+            print("Initial scan complete. Waiting for new PDFs... (press Ctrl+C to stop)")
+            initial_scan_announced = True
 
     # watcherコンテキストの生成
     watcher_config = WatcherConfig.from_settings(
@@ -256,8 +261,6 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
 
     # watcher起動
     print(f"Scan started ({scan_mode_label}).")
-    if not scan_once:
-        print("Watching for new PDFs... (press Ctrl+C to stop)")
     waiting_announced = False
     with PDFStorageWatcher(watcher_config) as watcher:
         logger.debug("Scan watcher running.")
@@ -307,11 +310,10 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
             logger.debug("Stopping scan watcher on user request.")
 
     print(f"Scan stopped ({scan_mode_label}).")
-    total_skipped = (
-        skipped_count + watcher.skipped_by_state + pending_processor.skipped_unreadable
-    )
+    total_skipped = skipped_count
     pending_count = pending_queue.count_all()
     dropped_count = pending_processor.dropped_count
+    skipped_by_state = watcher.skipped_by_state
     print(
         f"Summary: created={created_count}, updated={updated_count}, "
         f"skipped={total_skipped}, pending={pending_count}, "
@@ -339,6 +341,10 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
             print(f"  ... {len(error_paths) - 10} more")
     if pending_count or dropped_count or error_paths:
         print("Hint: retry specific PDFs with `zotomatic scan --path <path>`")
+    if skipped_by_state:
+        print(
+            f"Note: {skipped_by_state} PDFs were unchanged (no processing needed)."
+        )
 
     if llm_client:
         llm_client.close()

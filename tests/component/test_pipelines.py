@@ -223,9 +223,11 @@ def test_run_scan_watch_message(
     class DummyWatcher:
         def __init__(self, _config):
             self.skipped_by_state = 0
-            pass
+            self._config = _config
 
         def __enter__(self):
+            if self._config.on_initial_scan_complete:
+                self._config.on_initial_scan_complete()
             return self
 
         def __exit__(self, exc_type, exc, tb):
@@ -274,7 +276,10 @@ def test_run_scan_watch_message(
 
     pipelines.run_scan({"watch": True})
     captured = capsys.readouterr()
-    assert "Watching for new PDFs... (press Ctrl+C to stop)" in captured.out
+    assert (
+        "Initial scan complete. Waiting for new PDFs... (press Ctrl+C to stop)"
+        in captured.out
+    )
     assert dummy_processor.call_count >= 1
 
 
