@@ -112,8 +112,6 @@ def user_config_keys() -> set[str]:
 
 
 def _build_default_config_template(settings: Mapping[str, Any]) -> str:
-    pdf_dir = settings.get("pdf_dir")
-    pdf_dir_line = f"pdf_dir = {_render_value(pdf_dir)}" if pdf_dir else None
     return "\n".join(
         [
             "# Zotomatic configuration",
@@ -122,7 +120,7 @@ def _build_default_config_template(settings: Mapping[str, Any]) -> str:
             "",
             "# Paths & watcher",
             f"note_dir = {_render_value(settings['note_dir'])}",
-            *(line for line in [pdf_dir_line] if line),
+            'pdf_dir = ""',
             "",
             "# Zotero",
             f"zotero_api_key = {_render_value(settings['zotero_api_key'])}",
@@ -250,6 +248,9 @@ def get_config_with_sources(
         if key not in merged:
             merged[key] = None
             sources[key] = "unset"
+    if merged.get("pdf_dir") in {"", None}:
+        merged["pdf_dir"] = None
+        sources["pdf_dir"] = "unset"
     return {key: (merged[key], sources.get(key, "default")) for key in merged}
 
 
