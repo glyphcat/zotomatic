@@ -65,5 +65,8 @@ pip-delete-this-directory.txt
 .zotomatic/db/*.db-wal
 .zotomatic/db/*.db-shm
 
+# UV
+**/.uv-cache/
+
 # Docs for dev.
 docs/dev/
