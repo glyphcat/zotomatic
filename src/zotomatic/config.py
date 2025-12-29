@@ -68,6 +68,22 @@ _INTERNAL_FIXED_SETTINGS = {
     "llm_input_char_limit",
     "watch_verbose_logging",
 }
+_USER_CONFIG_KEYS = {
+    "note_dir",
+    "pdf_dir",
+    "llm_openai_api_key",
+    "llm_output_language",
+    "llm_summary_mode",
+    "llm_tag_enabled",
+    "llm_summary_enabled",
+    "llm_daily_limit",
+    "tag_generation_limit",
+    "zotero_api_key",
+    "zotero_library_id",
+    "zotero_library_scope",
+    "note_title_pattern",
+    "template_path",
+}
 _CONFIG_SHOW_EXCLUDE_SETTINGS = _INTERNAL_FIXED_SETTINGS | {"config_path"}
 
 
@@ -89,6 +105,10 @@ def render_value(value: Any) -> str:
 
 def config_show_exclusions() -> set[str]:
     return set(_CONFIG_SHOW_EXCLUDE_SETTINGS)
+
+
+def user_config_keys() -> set[str]:
+    return set(_USER_CONFIG_KEYS)
 
 
 def _build_default_config_template(settings: Mapping[str, Any]) -> str:
@@ -226,6 +246,10 @@ def get_config_with_sources(
 
     merged["config_path"] = str(config_path)
     sources["config_path"] = "fixed"
+    for key in _USER_CONFIG_KEYS:
+        if key not in merged:
+            merged[key] = None
+            sources[key] = "unset"
     return {key: (merged[key], sources.get(key, "default")) for key in merged}
 
 

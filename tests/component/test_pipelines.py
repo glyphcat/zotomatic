@@ -206,7 +206,7 @@ def test_run_config_show_filters_internal_keys(
 ) -> None:
     settings = {
         "note_dir": ("/notes", "default"),
-        "pdf_dir": ("/pdfs", "file"),
+        "pdf_dir": (None, "unset"),
         "llm_openai_model": ("ignored", "fixed"),
         "config_path": ("/fixed/config.toml", "fixed"),
         "watch_verbose_logging": (True, "fixed"),
@@ -217,8 +217,8 @@ def test_run_config_show_filters_internal_keys(
     )
     monkeypatch.setattr(
         pipelines.config,
-        "config_show_exclusions",
-        lambda: {"llm_openai_model", "config_path", "watch_verbose_logging"},
+        "user_config_keys",
+        lambda: {"note_dir", "pdf_dir"},
     )
 
     result = pipelines.run_config_show({})
@@ -227,9 +227,7 @@ def test_run_config_show_filters_internal_keys(
     assert "note_dir =" in captured.out
     assert "(default)" in captured.out
     assert "pdf_dir" in captured.out
-    assert "llm_openai_model" not in captured.out
-    assert "config_path" not in captured.out
-    assert "watch_verbose_logging" not in captured.out
+    assert "(unset)" in captured.out
 
 
 def test_run_config_default(

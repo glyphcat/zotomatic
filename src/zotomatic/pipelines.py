@@ -482,23 +482,26 @@ def run_doctor(cli_options: Mapping[str, Any] | None = None):
 
 def run_config_show(cli_options: Mapping[str, Any] | None = None):
     settings = config.get_config_with_sources(cli_options)
-    exclusions = config.config_show_exclusions()
-    visible_items = {
-        k: v for k, v in settings.items() if k not in exclusions
-    }
+    keys = config.user_config_keys()
+    visible_items = {k: settings.get(k, (None, "unset")) for k in keys}
     if not visible_items:
         print("No configurable settings available.")
         return 0
     width = max(len(key) for key in visible_items)
-    rendered = {
-        key: config.render_value(value) for key, (value, _source) in visible_items.items()
-    }
+    rendered: dict[str, str] = {}
+    for key, (value, _source) in visible_items.items():
+        rendered[key] = "" if value is None else config.render_value(value)
     value_width = max(len(value) for value in rendered.values())
     print("Effective configuration:")
     for key in sorted(visible_items):
         padded = key.ljust(width)
         value, source = visible_items[key]
-        suffix = "default" if source == "default" else ""
+        if source == "default":
+            suffix = "default"
+        elif source == "unset":
+            suffix = "unset"
+        else:
+            suffix = ""
         value_str = rendered[key].ljust(value_width)
         if suffix:
             print(f"  {padded} = {value_str}  ({suffix})")
