@@ -13,20 +13,6 @@ from zotomatic.errors import ZotomaticCLIError, ZotomaticError
 from . import api
 
 # TODO: verbose対応,dry-run対応
-"""
-cli.py で --verbose をパース → get_logger(verbose=args.verbose)
-
-そのロガーを api.py や各モジュールに渡す
-
-例外は errors.py のクラスで揃えて投げる
-
-try:
-    api.run_scan(config, logger=logger)
-except ZotomaticError as e:
-    logger.error(f"fatal: {e}")
-    sys.exit(1)
-
-"""
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -62,16 +48,12 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Rescan PDFs and generate missing notes, ignoring watcher state",
     )
-    config_parser = subparsers.add_parser(
-        "config", help="Manage configuration values"
-    )
+    config_parser = subparsers.add_parser("config", help="Manage configuration values")
     config_subparsers = config_parser.add_subparsers(dest="config_command")
     config_subparsers.add_parser("show", help="Show effective configuration values")
     config_subparsers.add_parser("default", help="Reset config to defaults")
     subparsers.add_parser("doctor", help="Inspect project health")
-    init = subparsers.add_parser(
-        "init", help="Initialize a Zotomatic workspace"
-    )
+    init = subparsers.add_parser("init", help="Initialize a Zotomatic workspace")
     init.add_argument(
         "--pdf-dir",
         dest="pdf_dir",
@@ -88,9 +70,7 @@ def _build_parser() -> argparse.ArgumentParser:
         dest="template_path",
         help="Path to the note template",
     )
-    template = subparsers.add_parser(
-        "template", help="Manage note templates"
-    )
+    template = subparsers.add_parser("template", help="Manage note templates")
     template_subparsers = template.add_subparsers(
         dest="template_command", required=True
     )
@@ -133,7 +113,9 @@ def _print_help() -> None:
     print("  scan:")
     print("    --once              Scan existing PDFs once and exit")
     print("    --watch             Watch for new PDFs (default)")
-    print("    --path PATH [...]   Generate notes for specific PDFs (processed in order) and exit")
+    print(
+        "    --path PATH [...]   Generate notes for specific PDFs (processed in order) and exit"
+    )
     print("    --force             Rescan PDFs and generate missing notes")
     print("  init:")
     print("    --pdf-dir PATH      (required) Directory containing PDF files")
@@ -180,9 +162,7 @@ def main(argv: Sequence[str] | None = None) -> None:
             elif template_command == "set":
                 pipelines.run_template_set(cli_options)
             else:  # pragma: no cover - argparse enforces choices
-                raise ZotomaticCLIError(
-                    f"Unknown template command: {template_command}"
-                )
+                raise ZotomaticCLIError(f"Unknown template command: {template_command}")
             return
         if command == "config":
             config_command = args.config_command
@@ -193,9 +173,7 @@ def main(argv: Sequence[str] | None = None) -> None:
             elif config_command == "default":
                 pipelines.run_config_default(cli_options)
             else:  # pragma: no cover - argparse enforces choices
-                raise ZotomaticCLIError(
-                    f"Unknown config command: {config_command}"
-                )
+                raise ZotomaticCLIError(f"Unknown config command: {config_command}")
             return
 
         handler = handlers[command]
