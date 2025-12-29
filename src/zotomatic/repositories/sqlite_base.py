@@ -25,7 +25,7 @@ class SQLiteRepository:
 
     def __post_init__(self) -> None:
         self._schema_path = (
-            Path(__file__).resolve().parent / "db" / "schema.sql"
+            Path(__file__).resolve().parents[1] / "db" / "schema.sql"
         )
         self._ensure_initialized()
 
