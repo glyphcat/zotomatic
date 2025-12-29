@@ -105,6 +105,9 @@ def test_force_scan_ignores_file_state(
         def upsert(self, stored: WatcherFileState) -> None:
             self._stored = stored
 
+        def count_under(self, _dir_path: Path) -> int:
+            return 1
+
     class DummyStateRepo:
         def __init__(self, stored: WatcherFileState):
             self.file_state = DummyFileStateRepo(stored)
@@ -120,3 +123,38 @@ def test_force_scan_ignores_file_state(
     monkeypatch.setattr(watcher, "_wait_for_stable", lambda _p: True)
     watcher._handle_candidate(pdf_path)
     assert seen == [pdf_path.resolve()]
+
+
+def test_skipped_by_state_increments(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    pdf_path = tmp_path / "file.pdf"
+    pdf_path.write_text("data", encoding="utf-8")
+    stat = pdf_path.stat()
+    previous = WatcherFileState.from_path(
+        file_path=pdf_path,
+        mtime_ns=stat.st_mtime_ns,
+        size=stat.st_size,
+    )
+
+    class DummyFileStateRepo:
+        def get(self, _path: Path):
+            return previous
+
+        def upsert(self, _state: WatcherFileState) -> None:
+            return None
+
+        def count_under(self, _dir_path: Path) -> int:
+            return 1
+
+    class DummyStateRepo:
+        file_state = DummyFileStateRepo()
+        directory_state = None
+
+    config = WatcherConfig(
+        watch_dir=tmp_path,
+        on_pdf_created=lambda _p: None,
+        state_repository=DummyStateRepo(),
+    )
+    watcher = PDFStorageWatcher(config)
+    monkeypatch.setattr(watcher, "_wait_for_stable", lambda _p: True)
+    watcher._handle_candidate(pdf_path)
+    assert watcher.skipped_by_state == 1

@@ -31,6 +31,7 @@ class PendingQueueProcessor:
         self._config = config or PendingQueueProcessorConfig()
         self._logger = get_logger(self._config.logger_name, False)
         self._stop_event = stop_event
+        self._skipped_unreadable = 0
 
     def run_once(self, limit: int | None = None) -> int:
         """期限になったpendingを処理し、成功件数を返す。"""
@@ -153,6 +154,8 @@ class PendingQueueProcessor:
 
     def _drop_permanent(self, file_path: str | Path, reason: str) -> None:
         self._queue.resolve(file_path)
+        if reason == "PDF is unreadable":
+            self._skipped_unreadable += 1
         self._logger.warning("Pending entry dropped: %s (%s)", file_path, reason)
 
     def _is_pdf_readable(self, pdf_path: Path) -> bool:
@@ -168,3 +171,7 @@ class PendingQueueProcessor:
     @property
     def stop_event(self) -> threading.Event | None:
         return self._stop_event
+
+    @property
+    def skipped_unreadable(self) -> int:
+        return self._skipped_unreadable

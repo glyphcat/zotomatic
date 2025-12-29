@@ -20,6 +20,7 @@ class PDFStorageWatcher:
         self._config = config
         self._logger = get_logger(config.logger_name, config.verbose_logging)
         self._force_scan = config.force_scan
+        self._skipped_by_state = 0
         self._file_state_repository = (
             config.state_repository.file_state if config.state_repository else None
         )
@@ -229,6 +230,10 @@ class PDFStorageWatcher:
                         previous
                         and previous.aggregated_mtime_ns == current_mtime
                     ):
+                        if self._file_state_repository:
+                            self._skipped_by_state += (
+                                self._file_state_repository.count_under(dir_path)
+                            )
                         continue
                 except OSError:
                     continue
@@ -291,6 +296,7 @@ class PDFStorageWatcher:
                     self._logger.debug(
                         "PDF unchanged since last scan; skipping: %s", resolved
                     )
+                    self._skipped_by_state += 1
                     return
             except Exception as exc:  # pragma: no cover - sqlite/filesystem dependent
                 self._logger.debug(
@@ -370,3 +376,7 @@ class PDFStorageWatcher:
             self._poll_for_new_files()
             if self._stop_event.wait(self._config.fallback_poll_interval):
                 break
+
+    @property
+    def skipped_by_state(self) -> int:
+        return self._skipped_by_state

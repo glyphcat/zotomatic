@@ -29,11 +29,13 @@ def test_sqlite_meta_store(tmp_path: Path, sqlite_schema_path: Path) -> None:
 def test_sqlite_file_state_store(tmp_path: Path, sqlite_schema_path: Path) -> None:
     config = WatcherStateRepositoryConfig(sqlite_path=tmp_path / "state.db")
     store = SqliteFileStateStore(config)
-    state = WatcherFileState(file_path=Path("/tmp/file.pdf"), mtime_ns=1, size=2, last_seen_at=3)
+    file_path = Path("/tmp/file.pdf").resolve()
+    state = WatcherFileState(file_path=file_path, mtime_ns=1, size=2, last_seen_at=3)
     store.upsert(state)
-    loaded = store.get("/tmp/file.pdf")
+    loaded = store.get(str(file_path))
     assert loaded is not None
     assert loaded.size == 2
+    assert store.count_under(file_path.parent) == 1
 
 
 def test_sqlite_directory_state_store(tmp_path: Path, sqlite_schema_path: Path) -> None:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Mapping
 
@@ -53,3 +54,17 @@ class SqliteFileStateStore(SQLiteRepository, FileStateStore):
             sha1=row["sha1"],
             last_seen_at=row["last_seen_at"],
         )
+
+    def count_under(self, dir_path: str | Path) -> int:
+        resolved = Path(dir_path).expanduser().resolve()
+        prefix = f"{resolved}{os.sep}"
+        query = """
+            SELECT COUNT(*) AS count
+            FROM files
+            WHERE file_path LIKE ?
+        """
+        with self._connect() as conn:
+            row = conn.execute(query, (f"{prefix}%",)).fetchone()
+        if row is None:
+            return 0
+        return int(row["count"] or 0)

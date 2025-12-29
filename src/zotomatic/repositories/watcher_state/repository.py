@@ -27,6 +27,9 @@ class FileStateStore(ABC):
     @abstractmethod
     def get(self, path: str | Path) -> WatcherFileState | None: ...
 
+    @abstractmethod
+    def count_under(self, dir_path: str | Path) -> int: ...
+
 
 class DirectoryStateStore(ABC):
     @abstractmethod

@@ -109,7 +109,13 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
         logger=logger,
     )
 
+    created_count = 0
+    updated_count = 0
+    skipped_count = 0
+    error_count = 0
+
     def _process_pdf(pdf_path: Path) -> None:
+        nonlocal created_count, updated_count, skipped_count
         pdf_path = Path(pdf_path)
         context = zotero_client.build_context(pdf_path) or NoteBuilderContext(
             title=pdf_path.stem,
@@ -128,6 +134,7 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
                         existing_path=existing,
                     )
                 ):
+                    updated_count += 1
                     return
                 if note_workflow.update_pending_note(
                     NoteWorkflowContext(
@@ -135,23 +142,35 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
                         existing_path=existing,
                     )
                 ):
+                    updated_count += 1
                     return
                 logger.debug(
                     "Note already exists (citekey=%s): %s; skipping.",
                     citekey,
                     existing,
                 )
+                skipped_count += 1
                 return
 
         # ノート生成
         note = note_workflow.create_new_note(
             NoteWorkflowContext(builder_context=context)
         )
+        created_count += 1
         if citekey:
             citekey_index[citekey] = note.path
             print(f"Note created: {note.path}")
         else:
             print(f"Note created: {note.path}")
+
+    def _process_pdf_safe(pdf_path: Path) -> None:
+        nonlocal error_count
+        try:
+            _process_pdf(pdf_path)
+        except Exception:  # pragma: no cover - depends on downstream failures
+            error_count += 1
+            logger.exception("Failed to process PDF: %s", pdf_path)
+            raise
 
     if scan_paths:
         expanded_paths = [Path(path).expanduser() for path in scan_paths]
@@ -168,8 +187,15 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
             )
         print(f"Scan started ({scan_mode_label}).")
         for path in expanded_paths:
-            _process_pdf(path)
+            try:
+                _process_pdf_safe(path)
+            except Exception:
+                continue
         print(f"Scan completed ({scan_mode_label}).")
+        print(
+            f"Summary: created={created_count}, updated={updated_count}, "
+            f"skipped={skipped_count}, errors={error_count}"
+        )
         if llm_client:
             llm_client.close()
         return 0
@@ -214,14 +240,14 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
     pending_processor = PendingQueueProcessor(
         queue=pending_queue,
         zotero_resolver=zotero_resolver,
-        on_resolved=_process_pdf,
+        on_resolved=_process_pdf_safe,
         config=pending_processor_config,
         stop_event=stop_event,
     )
 
     # watcher起動
     print(f"Scan started ({scan_mode_label}).")
-    with PDFStorageWatcher(watcher_config):
+    with PDFStorageWatcher(watcher_config) as watcher:
         logger.debug("Scan watcher running.")
         try:
             while True:
@@ -258,6 +284,13 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
             logger.debug("Stopping scan watcher on user request.")
 
     print(f"Scan stopped ({scan_mode_label}).")
+    total_skipped = (
+        skipped_count + watcher.skipped_by_state + pending_processor.skipped_unreadable
+    )
+    print(
+        f"Summary: created={created_count}, updated={updated_count}, "
+        f"skipped={total_skipped}, errors={error_count}"
+    )
 
     if llm_client:
         llm_client.close()

@@ -151,6 +151,7 @@ def test_run_scan_path_mode(
     captured = capsys.readouterr()
     assert "Scan started (path)." in captured.out
     assert "Scan completed (path)." in captured.out
+    assert "Summary: created=" in captured.out
     assert "Note created:" in captured.out
 
 
