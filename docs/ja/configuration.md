@@ -18,8 +18,8 @@
 
 | config キー | 環境変数キー | 区分 | 意味 |
 | --- | --- | --- | --- |
-| `note_dir` | `ZOTOMATIC_NOTE_DIR` | 任意 | 生成ノートの出力先ディレクトリ (未指定時は既定値)。 |
-| `notes_encoding` | `ZOTOMATIC_NOTES_ENCODING` | 任意 | ノートの文字エンコーディング (既定: `utf-8`)。 |
+| `note_dir` | `ZOTOMATIC_NOTE_DIR` | 任意 | 生成ノートの出力先ディレクトリ。 |
+| `notes_encoding` | `ZOTOMATIC_NOTES_ENCODING` | 任意 | ノートの文字エンコーディング。 |
 | `pdf_dir` | `ZOTOMATIC_PDF_DIR` | 必須 | 監視対象となる PDF 格納ディレクトリ。 |
 | `llm_output_language` | `ZOTOMATIC_LLM_OUTPUT_LANGUAGE` | 任意 | LLM 出力言語コード。指定できる言語コード: `en`, `ja`, `zh`, `ko`, `es`, `pt`, `fr`, `de`, `it`, `nl`, `sv`, `pl`, `tr`, `ru`。 |
 | `llm_summary_mode` | `ZOTOMATIC_LLM_SUMMARY_MODE` | 任意 | 要約モード: `quick`, `standard`, `deep`。 |
@@ -27,13 +27,13 @@
 | `llm_tag_enabled` | `ZOTOMATIC_LLM_TAG_ENABLED` | 任意 | LLM によるタグ生成を有効化。 |
 | `llm_summary_enabled` | `ZOTOMATIC_LLM_SUMMARY_ENABLED` | 任意 | LLM による要約生成を有効化。 |
 | `llm_openai_api_key` | `ZOTOMATIC_LLM_OPENAI_API_KEY` | 条件付き必須 | OpenAI を使う場合に必要。 |
-| `llm_timeout` | `ZOTOMATIC_LLM_TIMEOUT` | 任意 | LLM API リクエストのタイムアウト秒数 (既定: `30.0`、TOML の float で指定)。 |
+| `llm_timeout` | `ZOTOMATIC_LLM_TIMEOUT` | 任意 | LLM API リクエストのタイムアウト秒数 (TOML の float で指定)。 |
 | `llm_daily_limit` | `ZOTOMATIC_LLM_DAILY_LIMIT` | 任意 | LLM 実行回数の 1 日あたり上限。 |
 | `zotero_api_key` | `ZOTOMATIC_ZOTERO_API_KEY` | 条件付き必須 | Zotero 解決を使う場合に必要。 |
 | `zotero_library_id` | `ZOTOMATIC_ZOTERO_LIBRARY_ID` | 任意 | Zotero ライブラリ ID (空ならユーザー)。 |
 | `zotero_library_scope` | `ZOTOMATIC_ZOTERO_LIBRARY_SCOPE` | 任意 | Zotero のスコープ: `user` / `group`。 |
-| `note_title_pattern` | `ZOTOMATIC_NOTE_TITLE_PATTERN` | 任意 | ノートのファイル名テンプレート (未指定時は既定値)。 |
-| `template_path` | `ZOTOMATIC_TEMPLATE_PATH` | 任意 | ノートテンプレートのパス (未指定時は既定値)。 |
+| `note_title_pattern` | `ZOTOMATIC_NOTE_TITLE_PATTERN` | 任意 | ノートのファイル名テンプレート。 |
+| `template_path` | `ZOTOMATIC_TEMPLATE_PATH` | 任意 | ノートテンプレートのパス。 |
 
 区分の意味:
 
@@ -41,7 +41,27 @@
 - 条件付き必須: 特定機能を使う場合のみ必要
 - 任意: 上書きしない限りデフォルトで動作
 
-### config.toml 例
+### デフォルト値一覧
+
+| キー | デフォルト値 |
+| --- | --- |
+| `note_dir` | `~/Zotomatic/notes` |
+| `notes_encoding` | `utf-8` |
+| `llm_output_language` | `ja` |
+| `llm_summary_mode` | `quick` |
+| `tag_generation_limit` | `8` |
+| `llm_tag_enabled` | `true` |
+| `llm_summary_enabled` | `true` |
+| `llm_openai_api_key` | `(空)` |
+| `llm_timeout` | `30.0` |
+| `llm_daily_limit` | `50` |
+| `zotero_api_key` | `(空)` |
+| `zotero_library_id` | `(空)` |
+| `zotero_library_scope` | `user` |
+| `note_title_pattern` | `{{ year }}-{{ slug80 }}-{{ citekey }}` |
+| `template_path` | `~/Zotomatic/templates/note.md` |
+
+### 設定ファイル　（config.toml）
 
 ```toml
 llm_openai_api_key = "sk-..."
@@ -53,7 +73,7 @@ template_path = "~/Zotomatic/templates/note.md"
 
 ### 環境変数
 
-上記の環境変数キーのみを受け付けます。接頭辞を除去して小文字化したものが設定キーになります。
+設定キー一覧の環境変数キーのみを受け付けます。接頭辞を除去して小文字化したものが設定キーになります。
 
 例:
 
@@ -90,6 +110,14 @@ export ZOTOMATIC_LLM_OPENAI_API_KEY=...
 | `tr` | Türkçe |
 | `zh` | 中文 |
 
+## `llm_summary_mode` (要約モード) について
+
+`llm_summary_mode` は要約の詳細度を切り替えます。
+
+- `quick`: アブストラクト中心の短い要約。
+- `standard`: アブストラクトと各セクションの抜粋を使った要約。
+- `deep`: 本文を分割して要約し、最後に統合する詳細要約。
+
 ## `note_title_pattern` (ノート名テンプレート) について
 
 `note_title_pattern` は `{{ key }}` 形式のプレースホルダーを使ってファイル名を組み立てます。値が空の場合は空文字になります。拡張子が指定されていない場合は `.md` が付与され、ファイル名は安全な文字に置き換えられます。
@@ -121,4 +149,3 @@ export ZOTOMATIC_LLM_OPENAI_API_KEY=...
 | `zotomatic_last_updated` | 最終更新日時 (ISO 8601)。 |
 | `slug80` | `title` / `citekey` / `year` から生成する 80 文字のスラッグ。 |
 | `slug40` | `title` / `citekey` / `year` から生成する 40 文字のスラッグ。 |
-
