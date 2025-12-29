@@ -12,7 +12,7 @@ from typing import Any
 from pyzotero import zotero
 
 from zotomatic import config
-from zotomatic.errors import ZotomaticLLMConfigError
+from zotomatic.errors import ZotomaticCLIError, ZotomaticLLMConfigError
 from zotomatic.llm import create_llm_client
 from zotomatic.logging import get_logger
 from zotomatic.note.builder import NoteBuilder
@@ -50,25 +50,21 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
 
     # Zotomaticのユーザー設定取得
     cli_options = dict(cli_options or {})
+    scan_paths = cli_options.pop("path", None)
     scan_once = bool(cli_options.pop("once", False))
     scan_watch = bool(cli_options.pop("watch", False))
-    if not scan_once and not scan_watch:
+    scan_modes = sum([bool(scan_paths), scan_once, scan_watch])
+    if scan_modes > 1:
+        raise ZotomaticCLIError(
+            "Scan options are mutually exclusive: --once, --watch, --path"
+        )
+    if not scan_paths and not scan_once and not scan_watch:
         scan_watch = True
-    scan_mode = "once" if scan_once else "watch"
+    scan_mode = "path" if scan_paths else ("once" if scan_once else "watch")
     settings = _merge_config(cli_options)
 
     # repositoryの準備
     note_repository = NoteRepository.from_settings(settings)
-    # pdf_repository = PDFRepository.from_settings(settings)
-    state_repository = WatcherStateRepository.from_settings(settings)
-    pending_queue = PendingQueue.from_state_repository(state_repository)
-    pending_processor_config = PendingQueueProcessorConfig()
-    seed_batch_limit = pending_processor_config.batch_limit
-    pending_seed_buffer: list[Path] = []
-    pending_seed_lock = threading.Lock()
-    runtime_seed_complete = False
-    boot_seed_complete = state_repository.meta.get("boot_seed_complete") == "1"
-    stop_event = threading.Event()
     citekey_index = note_repository.build_citekey_index()
     note_builder = NoteBuilder(
         repository=note_repository,
@@ -150,6 +146,38 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
             print(f"Note created: {note.path}")
         else:
             print(f"Note created: {note.path}")
+
+    if scan_paths:
+        expanded_paths = [Path(path).expanduser() for path in scan_paths]
+        invalid = [
+            path
+            for path in expanded_paths
+            if not path.exists() or not path.is_file()
+        ]
+        if invalid:
+            invalid_list = ", ".join(str(path) for path in invalid)
+            raise ZotomaticCLIError(
+                f"Invalid PDF path(s): {invalid_list}",
+                hint="Pass existing PDF file paths to --path.",
+            )
+        print(f"Scan started ({scan_mode}).")
+        for path in expanded_paths:
+            _process_pdf(path)
+        print(f"Scan completed ({scan_mode}).")
+        if llm_client:
+            llm_client.close()
+        return 0
+
+    # pdf_repository = PDFRepository.from_settings(settings)
+    state_repository = WatcherStateRepository.from_settings(settings)
+    pending_queue = PendingQueue.from_state_repository(state_repository)
+    pending_processor_config = PendingQueueProcessorConfig()
+    seed_batch_limit = pending_processor_config.batch_limit
+    pending_seed_buffer: list[Path] = []
+    pending_seed_lock = threading.Lock()
+    runtime_seed_complete = False
+    boot_seed_complete = state_repository.meta.get("boot_seed_complete") == "1"
+    stop_event = threading.Event()
 
     def _on_pdf_created(pdf_path):
         logger.debug("Watcher detected %s", pdf_path)

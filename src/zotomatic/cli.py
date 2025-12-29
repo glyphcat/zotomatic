@@ -49,6 +49,11 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Watch for new PDFs (default)",
     )
+    scan_mode.add_argument(
+        "--path",
+        nargs="+",
+        help="Generate notes for specific PDF paths (processed in order) and exit",
+    )
     subparsers.add_parser("doctor", help="Inspect project health")
     init = subparsers.add_parser(
         "init", help="Initialize a Zotomatic workspace"
@@ -111,6 +116,7 @@ def _print_help() -> None:
     print("  scan:")
     print("    --once              Scan existing PDFs once and exit")
     print("    --watch             Watch for new PDFs (default)")
+    print("    --path PATH [...]   Generate notes for specific PDFs (processed in order) and exit")
     print("  init:")
     print("    --pdf-dir PATH      (required) Directory containing PDF files")
     print("    --note-dir PATH     Override default note directory")

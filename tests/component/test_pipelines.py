@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from zotomatic import pipelines
+from zotomatic.errors import ZotomaticCLIError
 from zotomatic.repositories.types import WatcherStateRepositoryConfig
 
 
@@ -93,3 +94,94 @@ def test_run_init(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytes
     assert "Config:" in captured.out
     assert "Template:" in captured.out
     assert "DB:" in captured.out
+
+
+def test_run_scan_path_mode(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    pdf_path = tmp_path / "paper.pdf"
+    pdf_path.write_text("dummy", encoding="utf-8")
+    template_path = tmp_path / "note.md"
+    template_path.write_text("{title}", encoding="utf-8")
+    note_dir = tmp_path / "notes"
+
+    settings = {
+        "note_dir": str(note_dir),
+        "template_path": str(template_path),
+        "note_title_pattern": "note-{{ title }}",
+        "llm_openai_api_key": "",
+        "zotero_api_key": "",
+        "zotero_library_id": "",
+        "zotero_library_scope": "user",
+    }
+
+    class DummyUsageStore:
+        def get(self, _usage_date: str):
+            return None
+
+        def upsert(self, _entry) -> None:
+            return None
+
+    class DummyUsageRepo:
+        usage = DummyUsageStore()
+
+    monkeypatch.setattr(pipelines.config, "get_config", lambda _opts: settings)
+    monkeypatch.setattr(
+        pipelines.LLMUsageRepository,
+        "from_settings",
+        lambda _settings: DummyUsageRepo(),
+    )
+
+    result = pipelines.run_scan({"path": [str(pdf_path)]})
+    assert result == 0
+
+    notes = list(note_dir.rglob("*.md"))
+    assert len(notes) == 1
+
+    captured = capsys.readouterr()
+    assert "Scan started (path)." in captured.out
+    assert "Scan completed (path)." in captured.out
+    assert "Note created:" in captured.out
+
+
+def test_run_scan_path_invalid(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    template_path = tmp_path / "note.md"
+    template_path.write_text("{title}", encoding="utf-8")
+    note_dir = tmp_path / "notes"
+
+    settings = {
+        "note_dir": str(note_dir),
+        "template_path": str(template_path),
+        "note_title_pattern": "note-{{ title }}",
+        "llm_openai_api_key": "",
+        "zotero_api_key": "",
+        "zotero_library_id": "",
+        "zotero_library_scope": "user",
+    }
+
+    class DummyUsageStore:
+        def get(self, _usage_date: str):
+            return None
+
+        def upsert(self, _entry) -> None:
+            return None
+
+    class DummyUsageRepo:
+        usage = DummyUsageStore()
+
+    missing = tmp_path / "missing.pdf"
+    monkeypatch.setattr(pipelines.config, "get_config", lambda _opts: settings)
+    monkeypatch.setattr(
+        pipelines.LLMUsageRepository,
+        "from_settings",
+        lambda _settings: DummyUsageRepo(),
+    )
+
+    with pytest.raises(ZotomaticCLIError) as excinfo:
+        pipelines.run_scan({"path": [str(missing)]})
+    assert "Invalid PDF path(s)" in str(excinfo.value)
