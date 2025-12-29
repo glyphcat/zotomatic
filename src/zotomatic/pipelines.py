@@ -523,7 +523,15 @@ def run_config_show(cli_options: Mapping[str, Any] | None = None):
     width = max(len(key) for key in visible_items)
     rendered: dict[str, str] = {}
     for key, (value, _source) in visible_items.items():
-        rendered[key] = "" if value is None else config.render_value(value)
+        if key == "llm_openai_api_key" and value:
+            raw = str(value)
+            if len(raw) <= 8:
+                masked = "***"
+            else:
+                masked = f"{raw[:4]}...{raw[-4:]}"
+            rendered[key] = f'"{masked}"'
+        else:
+            rendered[key] = "" if value is None else config.render_value(value)
     value_width = max(len(value) for value in rendered.values())
     print("Effective configuration:")
     for key in sorted(visible_items):
