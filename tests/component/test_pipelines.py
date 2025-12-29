@@ -152,6 +152,10 @@ def test_run_scan_path_mode(
     assert "Scan started (path)." in captured.out
     assert "Scan completed (path)." in captured.out
     assert "Summary: created=" in captured.out
+    assert "pending=0" in captured.out
+    assert "dropped=0" in captured.out
+    assert "pending=0" in captured.out
+    assert "dropped=0" in captured.out
     assert "Note created:" in captured.out
 
 
@@ -210,6 +214,9 @@ def test_run_scan_watch_message(
         def get_due(self, limit=1):
             return []
 
+        def count_all(self):
+            return 0
+
     class DummyWatcher:
         def __init__(self, _config):
             self.skipped_by_state = 0
@@ -224,6 +231,7 @@ def test_run_scan_watch_message(
     class DummyPendingProcessor:
         loop_interval_seconds = 0
         skipped_unreadable = 0
+        dropped_count = 0
 
         def run_once(self):
             return 0

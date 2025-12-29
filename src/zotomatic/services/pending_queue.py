@@ -36,6 +36,9 @@ class PendingQueue:
             now = int(time.time())
         return self._repository.list_before(now, limit=limit)
 
+    def count_all(self) -> int:
+        return self._repository.count_all()
+
     def update_attempt(
         self,
         file_path: str | Path,

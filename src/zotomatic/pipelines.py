@@ -194,7 +194,7 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
         print(f"Scan completed ({scan_mode_label}).")
         print(
             f"Summary: created={created_count}, updated={updated_count}, "
-            f"skipped={skipped_count}, errors={error_count}"
+            f"skipped={skipped_count}, pending=0, dropped=0, errors={error_count}"
         )
         if llm_client:
             llm_client.close()
@@ -289,9 +289,12 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
     total_skipped = (
         skipped_count + watcher.skipped_by_state + pending_processor.skipped_unreadable
     )
+    pending_count = pending_queue.count_all()
+    dropped_count = pending_processor.dropped_count
     print(
         f"Summary: created={created_count}, updated={updated_count}, "
-        f"skipped={total_skipped}, errors={error_count}"
+        f"skipped={total_skipped}, pending={pending_count}, "
+        f"dropped={dropped_count}, errors={error_count}"
     )
 
     if llm_client:

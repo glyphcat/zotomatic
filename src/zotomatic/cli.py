@@ -52,7 +52,10 @@ def _build_parser() -> argparse.ArgumentParser:
     scan_mode.add_argument(
         "--path",
         nargs="+",
-        help="Generate notes for specific PDF paths (processed in order) and exit",
+        help=(
+            "Generate notes for specific PDF paths (processed in order) and exit; "
+            "useful for PDFs not in Zotero"
+        ),
     )
     scan.add_argument(
         "--force",

@@ -121,6 +121,7 @@ def test_processor_drops_unreadable_pdf(tmp_path: Path, monkeypatch: pytest.Monk
     assert processed == 0
     assert queue.resolved == [pdf_path]
     assert processor.skipped_unreadable == 1
+    assert processor.dropped_count == 1
 
 
 def test_processor_stops_on_event(tmp_path: Path) -> None:

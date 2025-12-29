@@ -97,6 +97,14 @@ class SqlitePendingStore(SQLiteRepository, PendingStore):
             for row in rows
         ]
 
+    def count_all(self) -> int:
+        query = "SELECT COUNT(*) AS count FROM pending"
+        with self._connect() as conn:
+            row = conn.execute(query).fetchone()
+        if row is None:
+            return 0
+        return int(row["count"] or 0)
+
     def delete(self, file_path: str | Path) -> None:
         resolved = Path(file_path).expanduser()
         with self._connect() as conn:
