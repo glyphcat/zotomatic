@@ -493,7 +493,7 @@ def run_doctor(cli_options: Mapping[str, Any] | None = None):
 
     pdf_dir = settings.get("pdf_dir")
     if not pdf_dir:
-        _fail("Paths", "pdf_dir is not configured")
+        _fail("Paths", "pdf_dir is not configured (scan --path can run without it)")
     else:
         pdf_path = Path(str(pdf_dir)).expanduser()
         if not pdf_path.exists():
