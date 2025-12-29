@@ -247,6 +247,8 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
 
     # watcher起動
     print(f"Scan started ({scan_mode_label}).")
+    if not scan_once:
+        print("Watching for new PDFs... (press Ctrl+C to stop)")
     with PDFStorageWatcher(watcher_config) as watcher:
         logger.debug("Scan watcher running.")
         try:

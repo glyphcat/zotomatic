@@ -155,6 +155,113 @@ def test_run_scan_path_mode(
     assert "Note created:" in captured.out
 
 
+def test_run_scan_watch_message(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    settings = {
+        "note_dir": str(tmp_path / "notes"),
+        "template_path": str(tmp_path / "note.md"),
+        "note_title_pattern": "note-{{ title }}",
+        "llm_openai_api_key": "",
+        "zotero_api_key": "",
+        "zotero_library_id": "",
+        "zotero_library_scope": "user",
+        "pdf_dir": str(tmp_path / "pdfs"),
+    }
+    Path(settings["note_dir"]).mkdir(parents=True, exist_ok=True)
+    Path(settings["template_path"]).write_text("{title}", encoding="utf-8")
+    Path(settings["pdf_dir"]).mkdir(parents=True, exist_ok=True)
+
+    class DummyUsageStore:
+        def get(self, _usage_date: str):
+            return None
+
+        def upsert(self, _entry) -> None:
+            return None
+
+    class DummyUsageRepo:
+        usage = DummyUsageStore()
+
+    monkeypatch.setattr(pipelines.config, "get_config", lambda _opts: settings)
+    monkeypatch.setattr(
+        pipelines.LLMUsageRepository,
+        "from_settings",
+        lambda _settings: DummyUsageRepo(),
+    )
+
+    class DummyMeta:
+        def get(self, _key: str):
+            return "1"
+
+        def set(self, _key: str, _value: str) -> None:
+            return None
+
+    class DummyStateRepo:
+        meta = DummyMeta()
+        pending = object()
+        zotero_attachment = object()
+        file_state = None
+        directory_state = None
+
+    class DummyPendingQueue:
+        def enqueue(self, _path):
+            return None
+
+        def get_due(self, limit=1):
+            return []
+
+    class DummyWatcher:
+        def __init__(self, _config):
+            self.skipped_by_state = 0
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return None
+
+    class DummyPendingProcessor:
+        loop_interval_seconds = 0
+        skipped_unreadable = 0
+
+        def run_once(self):
+            return 0
+
+    monkeypatch.setattr(pipelines, "PDFStorageWatcher", DummyWatcher)
+    monkeypatch.setattr(
+        pipelines, "PendingQueueProcessor", lambda *args, **kwargs: DummyPendingProcessor()
+    )
+    monkeypatch.setattr(
+        pipelines.PendingQueue, "from_state_repository", lambda _state: DummyPendingQueue()
+    )
+    monkeypatch.setattr(
+        pipelines.WatcherStateRepository, "from_settings", lambda _settings: DummyStateRepo()
+    )
+    monkeypatch.setattr(
+        pipelines.ZoteroResolver,
+        "from_state_repository",
+        lambda *args, **kwargs: object(),
+    )
+
+    class DummyEvent:
+        def set(self):
+            return None
+
+        def wait(self, _timeout):
+            return True
+
+        def is_set(self):
+            return False
+
+    dummy_event = DummyEvent()
+    monkeypatch.setattr(pipelines.threading, "Event", lambda: dummy_event)
+
+    pipelines.run_scan({"watch": True})
+    captured = capsys.readouterr()
+    assert "Watching for new PDFs... (press Ctrl+C to stop)" in captured.out
+
+
 def test_run_scan_path_invalid(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
