@@ -57,9 +57,7 @@ def _build_parser() -> argparse.ArgumentParser:
     config_parser = subparsers.add_parser(
         "config", help="Manage configuration values"
     )
-    config_subparsers = config_parser.add_subparsers(
-        dest="config_command", required=True
-    )
+    config_subparsers = config_parser.add_subparsers(dest="config_command")
     config_subparsers.add_parser("show", help="Show effective configuration values")
     config_subparsers.add_parser("default", help="Reset config to defaults")
     subparsers.add_parser("doctor", help="Inspect project health")
@@ -112,6 +110,7 @@ def _print_help() -> None:
     print("")
     print("Commands:")
     print("  scan                  Scan for PDFs and generate notes")
+    print("  config                Show effective configuration values (default)")
     print("  config show           Show effective configuration values")
     print("  config default        Reset config to defaults")
     print("  doctor                Inspect project health")
@@ -178,6 +177,8 @@ def main(argv: Sequence[str] | None = None) -> None:
             return
         if command == "config":
             config_command = args.config_command
+            if not config_command:
+                config_command = "show"
             if config_command == "show":
                 pipelines.run_config_show(cli_options)
             elif config_command == "default":
