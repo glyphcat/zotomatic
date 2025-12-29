@@ -54,6 +54,11 @@ def _build_parser() -> argparse.ArgumentParser:
         nargs="+",
         help="Generate notes for specific PDF paths (processed in order) and exit",
     )
+    scan.add_argument(
+        "--force",
+        action="store_true",
+        help="Rescan PDFs and generate missing notes, ignoring watcher state",
+    )
     config_parser = subparsers.add_parser(
         "config", help="Manage configuration values"
     )
@@ -126,6 +131,7 @@ def _print_help() -> None:
     print("    --once              Scan existing PDFs once and exit")
     print("    --watch             Watch for new PDFs (default)")
     print("    --path PATH [...]   Generate notes for specific PDFs (processed in order) and exit")
+    print("    --force             Rescan PDFs and generate missing notes")
     print("  init:")
     print("    --pdf-dir PATH      (required) Directory containing PDF files")
     print("    --note-dir PATH     Override default note directory")

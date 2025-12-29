@@ -19,6 +19,7 @@ class PDFStorageWatcher:
     def __init__(self, config: WatcherConfig) -> None:
         self._config = config
         self._logger = get_logger(config.logger_name, config.verbose_logging)
+        self._force_scan = config.force_scan
         self._file_state_repository = (
             config.state_repository.file_state if config.state_repository else None
         )
@@ -125,6 +126,7 @@ class PDFStorageWatcher:
 
     def _initial_scan(self) -> None:
         self._poll_for_new_files()
+        self._force_scan = False
         if self._config.on_initial_scan_complete:
             try:
                 self._config.on_initial_scan_complete()
@@ -198,6 +200,16 @@ class PDFStorageWatcher:
             except OSError as exc:  # pragma: no cover - depends on filesystem
                 self._logger.error("Failed to list PDFs: %s", exc, exc_info=True)
                 raise ZotomaticWatcherError("Failed to scan watch directory.") from exc
+        if self._force_scan:
+            try:
+                return [
+                    p
+                    for p in sorted(self._config.watch_dir.rglob("*.pdf"))
+                    if p.is_file()
+                ]
+            except OSError as exc:  # pragma: no cover - depends on filesystem
+                self._logger.error("Failed to list PDFs: %s", exc, exc_info=True)
+                raise ZotomaticWatcherError("Failed to scan watch directory.") from exc
 
         pattern = f"*{self._config.pdf_suffix}"
         pdfs: list[Path] = []
@@ -261,7 +273,7 @@ class PDFStorageWatcher:
             return
 
         stat = None
-        if self._file_state_repository:
+        if self._file_state_repository and not self._force_scan:
             try:
                 stat = resolved.stat()
                 previous = self._file_state_repository.get(resolved)

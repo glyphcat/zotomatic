@@ -195,6 +195,12 @@ def test_run_scan_path_invalid(
     assert "Invalid PDF path(s)" in str(excinfo.value)
 
 
+def test_run_scan_force_with_path_rejected() -> None:
+    with pytest.raises(ZotomaticCLIError) as excinfo:
+        pipelines.run_scan({"path": ["/tmp/a.pdf"], "force": True})
+    assert "--force cannot be used with --path" in str(excinfo.value)
+
+
 def test_run_config_show_filters_internal_keys(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:

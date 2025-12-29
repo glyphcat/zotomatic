@@ -53,14 +53,20 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
     scan_paths = cli_options.pop("path", None)
     scan_once = bool(cli_options.pop("once", False))
     scan_watch = bool(cli_options.pop("watch", False))
+    scan_force = bool(cli_options.pop("force", False))
     scan_modes = sum([bool(scan_paths), scan_once, scan_watch])
     if scan_modes > 1:
         raise ZotomaticCLIError(
             "Scan options are mutually exclusive: --once, --watch, --path"
         )
+    if scan_paths and scan_force:
+        raise ZotomaticCLIError("--force cannot be used with --path")
     if not scan_paths and not scan_once and not scan_watch:
         scan_watch = True
     scan_mode = "path" if scan_paths else ("once" if scan_once else "watch")
+    scan_mode_label = scan_mode
+    if scan_force and scan_mode in {"once", "watch"}:
+        scan_mode_label = f"{scan_mode}, force"
     settings = _merge_config(cli_options)
 
     # repositoryの準備
@@ -160,10 +166,10 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
                 f"Invalid PDF path(s): {invalid_list}",
                 hint="Pass existing PDF file paths to --path.",
             )
-        print(f"Scan started ({scan_mode}).")
+        print(f"Scan started ({scan_mode_label}).")
         for path in expanded_paths:
             _process_pdf(path)
-        print(f"Scan completed ({scan_mode}).")
+        print(f"Scan completed ({scan_mode_label}).")
         if llm_client:
             llm_client.close()
         return 0
@@ -198,6 +204,7 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
         _on_pdf_created,
         state_repository=state_repository,
         on_initial_scan_complete=_on_initial_scan_complete,
+        force_scan=scan_force,
     )
 
     zotero_resolver = ZoteroResolver.from_state_repository(
@@ -213,7 +220,7 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
     )
 
     # watcher起動
-    print(f"Scan started ({scan_mode}).")
+    print(f"Scan started ({scan_mode_label}).")
     with PDFStorageWatcher(watcher_config):
         logger.debug("Scan watcher running.")
         try:
@@ -250,7 +257,7 @@ def run_scan(cli_options: Mapping[str, Any] | None = None):
             stop_event.set()
             logger.debug("Stopping scan watcher on user request.")
 
-    print(f"Scan stopped ({scan_mode}).")
+    print(f"Scan stopped ({scan_mode_label}).")
 
     if llm_client:
         llm_client.close()

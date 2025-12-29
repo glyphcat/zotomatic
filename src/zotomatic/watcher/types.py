@@ -24,6 +24,7 @@ class WatcherConfig:
     on_initial_scan_complete: Callable[[], None] | None = None
     state_repository: WatcherStateRepository | None = None
     verbose_logging: bool = False
+    force_scan: bool = False
 
     def __post_init__(self) -> None:  # type: ignore[override]
         object.__setattr__(self, "watch_dir", Path(self.watch_dir).expanduser())
@@ -55,6 +56,7 @@ class WatcherConfig:
         callback: Callable[[Path], None],
         state_repository: WatcherStateRepository | None = None,
         on_initial_scan_complete: Callable[[], None] | None = None,
+        force_scan: bool = False,
     ) -> WatcherConfig:
         watch_dir = settings.get("pdf_dir")
         if not watch_dir:
@@ -68,4 +70,5 @@ class WatcherConfig:
             state_repository=state_repository,
             on_initial_scan_complete=on_initial_scan_complete,
             verbose_logging=verbose,
+            force_scan=force_scan,
         )
