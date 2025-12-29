@@ -59,3 +59,11 @@ pip-delete-this-directory.txt
 # VSCode / IDE
 .vscode/
 .idea/
+
+# Zotomatic sqlite runtime files
+.zotomatic/db/*.db
+.zotomatic/db/*.db-wal
+.zotomatic/db/*.db-shm
+
+# Docs for dev.
+docs/dev/
