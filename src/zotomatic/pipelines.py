@@ -513,6 +513,7 @@ def run_config_default(cli_options: Mapping[str, Any] | None = None):
     print(f"Config: reset to defaults at {result.config_path}")
     if result.backup_path:
         print(f"Config: backup created at {result.backup_path}")
+    print("Config: set pdf_dir before running scan")
     if result.template_created:
         print(f"Template: created {result.template_path}")
     else:

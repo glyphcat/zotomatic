@@ -41,7 +41,6 @@ _DEFAULT_TEMPLATE_PATH = _default_template_path()
 
 _DEFAULT_SETTINGS: dict[str, Any] = {
     "note_dir": _default_notes_dir(),
-    "pdf_dir": "~/Zotero/storage",
     "pdf_alias_prefix": "zotero:/storage",
     "llm_provider": "openai",
     "llm_openai_model": "gpt-4o-mini",
@@ -93,6 +92,8 @@ def config_show_exclusions() -> set[str]:
 
 
 def _build_default_config_template(settings: Mapping[str, Any]) -> str:
+    pdf_dir = settings.get("pdf_dir")
+    pdf_dir_line = f"pdf_dir = {_render_value(pdf_dir)}" if pdf_dir else None
     return "\n".join(
         [
             "# Zotomatic configuration",
@@ -101,7 +102,7 @@ def _build_default_config_template(settings: Mapping[str, Any]) -> str:
             "",
             "# Paths & watcher",
             f"note_dir = {_render_value(settings['note_dir'])}",
-            f"pdf_dir = {_render_value(settings['pdf_dir'])}",
+            *(line for line in [pdf_dir_line] if line),
             "",
             "# Zotero",
             f"zotero_api_key = {_render_value(settings['zotero_api_key'])}",
@@ -256,7 +257,9 @@ def initialize_config(cli_options: Mapping[str, Any] | None = None) -> InitResul
     cli_options = dict(cli_options or {})
     init_settings = dict(_DEFAULT_SETTINGS)
     for key, value in cli_options.items():
-        if key in init_settings and value is not None:
+        if value is None or key == "config_path":
+            continue
+        if key in init_settings or key == "pdf_dir":
             init_settings[key] = value
 
     config_created = False
