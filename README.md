@@ -1,23 +1,63 @@
 # Zotomatic
 
+Zotomatic is a CLI tool that generates Markdown research notes from PDFs using user-defined templates, Zotero metadata, and extracted text.  
+
+Zotomatic は、研究論文の PDF から Zotero の書誌情報や本文抽出結果をもとに、
+ユーザー定義テンプレートに従った Markdown 形式の研究ノートを自動生成する CLI ツールです。  
+[日本語版READMEはこちら](README.ja.md)  
+
+---
+
+## Quick Start
+
+[Start Guide](docs/en/getting-started.md)
+
+### Install
+
+```bash
+pip install zotomatic
+zotomatic init --pdf-dir ./papers  # Directory for PDFs
+```
+
+### Generate notes from a PDF file
+
+Generate a Markdown note from a specific PDF in any directory.  
+`pdf_dir` is not required.
+
+```bash
+zotomatic scan --path ./papers/sample.pdf
+```
+
+### Batch process PDFs under the configured directory
+
+Process all PDFs under the configured directory.  
+`pdf_dir` is required.
+
+```bash
+zotomatic scan --once
+```
+
+### Watch the configured directory for new PDFs
+
+Watch the configured directory and generate notes whenever a PDF is added.  
+`pdf_dir` is required.
+
+```bash
+zotomatic scan --watch
+```
+
+---
+
+## Overview
+
 Zotomatic is a CLI tool that starts from research PDFs, uses bibliographic information and extracted text, and generates Markdown notes based on user-defined templates.
 
 For PDFs managed in Zotero, Zotomatic can fetch metadata such as authors, title, and abstract to produce notes enriched with bibliographic details. It can also generate minimal notes for PDFs outside Zotero.
 
-Zotomatic can optionally integrate with an LLM to generate summaries and tags in a specified language and insert the results into notes.
+Zotomatic can optionally integrate with an LLM to generate summaries and tags in a specified language and insert the results into notes.  
 Note: Output quality and accuracy depend on the LLM.
 
-Notes are plain Markdown files, and templates are fully user-defined. You can use them with any editor or knowledge tool, including Obsidian.  
-
-
-**[日本語]**  
-Zotomatic は、研究論文の PDF を起点に、書誌情報や本文の抽出結果をもとにして、ユーザー定義のテンプレートに従って Markdown ノートを自動生成する CLI ツールです。  
-Zotero 管理下の PDF についてはノート生成時 メタデータの挿入も可能です。  
-また、LLMと連携することで論文内容の要約やタグ生成を指定言語で行い、その結果をノートに挿入できます。  
-
-詳細は日本語版のREADMEおよびドキュメントをご覧ください。  
-[日本語版README](README.ja.md)  
-[日本語版ドキュメント](docs/ja/index.md)  
+Notes are plain Markdown files, and templates are fully user-defined. You can use them with any editor or knowledge tool, including Obsidian.
 
 ---
 
@@ -76,7 +116,7 @@ See `docs/en/getting-started.md` for step-by-step instructions.
 
 - [Index](docs/en/index.md)
 - [Start Guide](docs/en/getting-started.md)
-- [Configuration Reference](docs/en/getting-started.md)
+- [Configuration Reference](docs/en/configuration.md)
 - [CLI Reference](docs/en/cli.md)
 
 ---

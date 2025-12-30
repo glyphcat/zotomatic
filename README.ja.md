@@ -1,5 +1,48 @@
 # Zotomatic
 
+Zotomatic は、研究論文の PDF から Zotero の書誌情報や本文抽出結果をもとに、
+ユーザー定義テンプレートに従った Markdown 形式の研究ノートを自動生成する CLI ツールです。
+
+---
+
+## クイックスタート
+[スタートガイド](docs/ja/getting-started.md)
+
+### インストール
+
+```bash
+pip install zotomatic
+zotomatic init --pdf-dir ./papers  # PDF を保存するディレクトリ
+```
+
+### PDFファイルからノートを生成する
+任意のディレクトリにある PDF ファイルを指定して、Markdown ノートを生成します。  
+設定値`pdf-dir`は不要です。
+
+```bash
+zotomatic scan --path ./papers/sample.pdf
+```
+
+### 設定したDFディレクトリ内のPDFをまとめて処理する
+設定したPDFディレクトリ内の PDF を一括で処理し、ノートを生成します。  
+設定値`pdf-dir`は必須です。
+
+```bash
+zotomatic scan --once
+```
+
+### 設定したPDFディレクトリを監視する
+設定したPDFディレクトリに PDF が追加されるたびに、自動でノートを生成します。  
+設定値`pdf-dir`は必須です。
+
+```bash
+zotomatic scan --watch
+```
+
+---
+
+## 概要
+
 Zotomatic は、研究論文の PDF を起点に、書誌情報や本文の抽出結果をもとにして、ユーザー定義のテンプレートに従って Markdown ノートを自動生成する CLI ツールです。
 
 Zotero で管理されている論文 PDF からは、著者・タイトル・アブストラクトなどのメタデータを取得して文献情報が反映されたノートを生成できます。一方で、Zotero 管理外の PDF に対しても、最低限の情報を用いたノート生成が可能です。
@@ -37,14 +80,6 @@ Zotero で管理されている論文 PDF からは、著者・タイトル・�
 
 ---
 
-## インストール
-
-```bash
-pip install zotomatic
-```
-
----
-
 ## ユースケース
 
 - **ブラウザから１クリックで PDF を自動でノート化**  
@@ -66,7 +101,7 @@ Zotero 連携でメタデータを取得したい場合は、Zotero デスクト
 
 - [インデックス](docs/ja/index.md)
 - [スタートガイド](docs/ja/getting-started.md)
-- [設定リファレンス](docs/ja/getting-started.md)
+- [設定リファレンス](docs/ja/configuration.md)
 - [CLI リファレンス](docs/ja/cli.md)
 
 ---
