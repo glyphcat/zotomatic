@@ -64,9 +64,10 @@ Zotero 連携でメタデータを取得したい場合は、Zotero デスクト
 
 ## ドキュメント
 
-- `docs/ja/getting-started.md`: スタートガイド
-- `docs/ja/configuration.md`: 設定リファレンス
-- `docs/ja/cli.md`: CLI リファレンス
+- [インデックス](docs/ja/index.md)
+- [スタートガイド](docs/ja/getting-started.md)
+- [設定リファレンス](docs/ja/getting-started.md)
+- [CLI リファレンス](docs/ja/cli.md)
 
 ---
 

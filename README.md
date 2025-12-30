@@ -74,10 +74,10 @@ See `docs/en/getting-started.md` for step-by-step instructions.
 
 ## Documentation
 
-- `docs/en/getting-started.md`: Start Guide
-- `docs/en/configuration.md`: Configuration Reference
-- `docs/en/cli.md`: CLI Reference
-- Japanese docs: `docs/ja/index.md`
+- [Index](docs/en/index.md)
+- [Start Guide](docs/en/getting-started.md)
+- [Configuration Reference](docs/en/getting-started.md)
+- [CLI Reference](docs/en/cli.md)
 
 ---
 
