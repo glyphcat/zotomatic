@@ -5,7 +5,7 @@ description = "A CLI tool for generating Markdown notes from academic PDF papers
 readme = "README.md"
 license = { file = "LICENSE" }
 authors = [
-    { name = "glyphcat", email = "glyphcat13@gmail.com" }
+    { name = "glyphcat" }
 ]
 requires-python = ">=3.10"
 dependencies = [
@@ -18,18 +18,32 @@ dependencies = [
 classifiers = [
     "Development Status :: 3 - Alpha",
     "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
-    "Operating System :: OS Independent",
+]
+keywords = [
+    "zotero",
+    "academic",
+    "research",
+    "paper",
+    "pdf",
+    "markdown",
+    "note",
+    "cli",
+    "metadata",
+    "template",
+    "summarization",
+    "tagging",
+    "llm"
 ]
 
 [project.urls]
 Source = "https://github.com/glyphcat/zotomatic"
 Issues = "https://github.com/glyphcat/zotomatic/issues"
-Documentation = "https://github.com/glyphcat/zotomatic#readme"
+Documentation = "https://github.com/glyphcat/zotomatic/tree/main/docs"
 
 [project.scripts]
 zotomatic = "zotomatic.cli:main"
