@@ -84,7 +84,7 @@ zotomatic scan --path ~/Downloads/a.pdf ~/Downloads/b.pdf
 
 ### `--force` (再走査)
 
-`--once` / `--watch` で、過去の走査結果によりスキップされた PDF も対象にします。既存ノートがある場合は更新・スキップの判定はそのまま行われます。
+`--once` / `--watch` で、過去の走査結果によりスキップされた PDF も対象にします。既存ノートがある場合は更新・スキップの判定はそのまま行われます。既存ノートの要約/タグが `pending` の場合は、ノートの更新が走ることがあります。
 
 ```bash
 zotomatic scan --once --force
