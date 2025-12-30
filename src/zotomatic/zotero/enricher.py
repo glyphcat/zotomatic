@@ -15,8 +15,12 @@ def enrich_paper_metadata(paper: ZoteroPaper) -> ZoteroPaper:
     if not pdf_path:
         return paper
 
-    # TODO: 不要な補完処理、抽出処理が実行されないように修正
-    # TODO: plain_textの全文抽出が必要か微妙なためリファクタ検討
+    missing_abstract = not paper.abstractNote
+    missing_year = not paper.year
+    missing_authors = not paper.authors
+    missing_title = not paper.title
+    if not any([missing_abstract, missing_year, missing_authors, missing_title]):
+        return paper
 
     try:
         plain_text = pdf.extract_plain_text(pdf_path)
