@@ -14,7 +14,8 @@ pip install zotomatic
 zotomatic init --pdf-dir "~/Zotero/storage"
 ```
 
-`--pdf-dir` は必須です。2回目以降の実行では既存の値を上書きせず、不足している設定やテンプレートだけを補完します。
+`--pdf-dir` は必須です。
+initコマンドは2回目以降の実行では既存の値を上書きせず、不足している設定やテンプレートだけを補完します。
 
 設定ファイルの既定パス:
 
@@ -31,7 +32,8 @@ zotomatic init --pdf-dir "~/Zotero/storage"
 - `zotero_api_key` / `zotero_library_id`: Zotero 連携を使う場合に必要
 - `llm_openai_api_key`: LLM による要約/タグ生成を使う場合に必要
 
-Zotero 連携でリッチなメタデータを使う場合は、Zotero デスクトップアプリを起動しておくのが基本です。起動していない場合や Zotero 管理外の PDF でも、最小限のノートは生成できます。
+Zotero 連携でZoteroのメタデータよりノートを作成したい場合は、Zotero デスクトップアプリを起動しておくのが基本です。
+起動していない場合や Zotero 管理外の PDF でも、最小限のノートは生成できます。
 
 設定例:
 
@@ -50,7 +52,7 @@ template_path = "~/Zotomatic/templates/note.md"
 zotomatic doctor
 ```
 
-標準的な運用 (pdf_dir を使った scan) が動くかを確認できます。`scan --path` だけを使う場合は、pdf_dir が未設定でも構いません。
+標準的な運用 (`scan --once`または`scan --watch`によるノート生成) が動くかを確認できます。`scan --path` だけを使う場合は、pdf_dir が未設定でも構いません。
 
 ## 5. ノート生成 (scan)
 
