@@ -58,16 +58,18 @@ def extract_abstract_candidate(
     path: str | Path,
     max_chars: int = 1200,
     logger: logging.Logger | None = None,
+    text: str | None = None,
 ) -> str:
     """Attempt to pull an abstract section from the PDF."""
 
     placeholder = "No abstract text was detected in the PDF."
-    try:
-        text = extract_plain_text(path)
-    except Exception as exc:  # pragma: no cover - depends on fitz/io errors
-        if logger:
-            logger.debug("Failed to extract PDF text for abstract: %s", exc)
-        return placeholder
+    if text is None:
+        try:
+            text = extract_plain_text(path)
+        except Exception as exc:  # pragma: no cover - depends on fitz/io errors
+            if logger:
+                logger.debug("Failed to extract PDF text for abstract: %s", exc)
+            return placeholder
 
     lines = [line.strip() for line in text.splitlines() if line.strip()]
     if not lines:

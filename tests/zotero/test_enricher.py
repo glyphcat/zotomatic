@@ -24,7 +24,9 @@ def test_enrich_paper_metadata(monkeypatch: pytest.MonkeyPatch) -> None:
     )
 
     monkeypatch.setattr(enricher.pdf, "extract_plain_text", lambda _p: "2021\nAlice, Bob")
-    monkeypatch.setattr(enricher.pdf, "extract_abstract_candidate", lambda _p: "Abstract")
+    monkeypatch.setattr(
+        enricher.pdf, "extract_abstract_candidate", lambda _p, **_kw: "Abstract"
+    )
     monkeypatch.setattr(enricher.pdf, "extract_year_candidate_from_text", lambda _t: "2021")
     monkeypatch.setattr(enricher.pdf, "extract_authors_candidate_from_text", lambda _t: "Alice, Bob")
 

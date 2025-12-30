@@ -24,7 +24,11 @@ def enrich_paper_metadata(paper: ZoteroPaper) -> ZoteroPaper:
 
     try:
         plain_text = pdf.extract_plain_text(pdf_path)
-        abstract_candidate = pdf.extract_abstract_candidate(pdf_path)
+        abstract_candidate = ""
+        if missing_abstract:
+            abstract_candidate = pdf.extract_abstract_candidate(
+                pdf_path, text=plain_text
+            )
     except Exception:  # pragma: no cover - corrupted or unsupported PDF
         return paper
 
