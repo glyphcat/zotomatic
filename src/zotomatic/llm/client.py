@@ -308,8 +308,8 @@ class BaseLLMClient(ABC):
 
 
 # --- LLM clients.---
-class OpenAIClient(BaseLLMClient):
-    """OpenAI-backed implementation for summaries and tags."""
+class OpenAILLMClient(BaseLLMClient):
+    """OpenAI ChatGPT-backed implementation for summaries and tags."""
 
     _DEEP_CHUNK_SENTENCE_RANGE = (3, 5)
     _DEEP_REDUCE_SENTENCE_RANGE = (6, 8)
@@ -374,5 +374,6 @@ class GoogleLLMClient(BaseLLMClient):
 
 # TODO: ここの処理はzoteroClient, NoteBuilder同様にpipelineでやるべきかも
 def create_llm_client(settings: Mapping[str, object]) -> BaseLLMClient:
+    # TODO: インスタンス生成処理拡張. settingsからモデルに応じたインスタンスを返却するよう修正
     config = LLMClientConfig.from_settings(settings)
-    return OpenAIClient(config)
+    return OpenAILLMClient(config)
