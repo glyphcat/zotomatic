@@ -366,6 +366,12 @@ class OpenAIClient(BaseLLMClient):
         return content.strip(), data
 
 
+class GoogleLLMClient(BaseLLMClient):
+    """Google Gemini-backed implementation for summaries and tags."""
+
+    ...
+
+
 # TODO: ここの処理はzoteroClient, NoteBuilder同様にpipelineでやるべきかも
 def create_llm_client(settings: Mapping[str, object]) -> BaseLLMClient:
     config = LLMClientConfig.from_settings(settings)
