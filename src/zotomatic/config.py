@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from zotomatic.errors import ZotomaticConfigError
+
 try:  # Python >=3.11
     import tomllib  # type: ignore[import-not-found]
 except ModuleNotFoundError:  # pragma: no cover - fallback for <3.11
@@ -50,6 +51,7 @@ _DEFAULT_SETTINGS: dict[str, Any] = {
     "llm_tag_enabled": True,
     "llm_summary_enabled": True,
     "llm_openai_api_key": "",
+    "llm_google_api_key": "",
     "llm_input_char_limit": 14000,
     "llm_daily_limit": 50,
     "tag_generation_limit": 8,
@@ -72,6 +74,7 @@ _USER_CONFIG_KEYS = {
     "note_dir",
     "pdf_dir",
     "llm_openai_api_key",
+    "llm_google_api_key",
     "llm_output_language",
     "llm_summary_mode",
     "llm_tag_enabled",
@@ -112,6 +115,7 @@ def user_config_keys() -> set[str]:
 
 
 def _build_default_config_template(settings: Mapping[str, Any]) -> str:
+    # TODO: configメッセージのgemini key対応
     return "\n".join(
         [
             "# Zotomatic configuration",
@@ -133,6 +137,7 @@ def _build_default_config_template(settings: Mapping[str, Any]) -> str:
             "",
             "# AI integration",
             f"llm_openai_api_key = {_render_value(settings['llm_openai_api_key'])}",
+            f"llm_google_api_key = {_render_value(settings['llm_google_api_key'])}",
             f"llm_summary_enabled = {_render_value(settings['llm_summary_enabled'])}",
             f"llm_tag_enabled = {_render_value(settings['llm_tag_enabled'])}",
             f"llm_summary_mode = {_render_value(settings['llm_summary_mode'])}",
