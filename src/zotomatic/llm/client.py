@@ -366,7 +366,7 @@ class OpenAILLMClient(BaseLLMClient):
         return content.strip(), data
 
 
-class GoogleLLMClient(BaseLLMClient):
+class GeminiLLMClient(BaseLLMClient):
     """Google Gemini-backed implementation for summaries and tags."""
 
     ...
