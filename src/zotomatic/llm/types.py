@@ -20,7 +20,7 @@ LLM_PROVIDER_DEFAULTS: dict[str, dict[str, str]] = {
         "base_url": "https://api.openai.com/v1",
     },
     "gemini": {
-        "model": "gemini-1.5-pro",
+        "model": "gemini-2.5-flash",
         "base_url": "https://generativelanguage.googleapis.com/v1beta",
     },
 }
@@ -78,28 +78,30 @@ class LLMClientConfig:
                     f"{Path('~/.zotomatic/config.toml').expanduser()}."
                 ),
             )
-        if provider != "openai":
+        if provider not in LLM_PROVIDER_DEFAULTS:
             raise ZotomaticLLMConfigError(
                 f"Unsupported LLM provider: {provider}.",
-                hint="Only the OpenAI provider is supported in this version.",
+                hint="Configure a supported LLM provider in llm.provider.",
             )
 
         provider_settings = cls._get_provider_settings(settings, provider)
         api_key = str(provider_settings.get("api_key") or "").strip()
         if not api_key:
             raise ZotomaticLLMConfigError(
-                "`llm.providers.openai.api_key` must be configured before using the LLM client.",
+                f"`llm.providers.{provider}.api_key` must be configured before using the LLM client.",
                 hint=(
-                    f"Set `llm.providers.openai.api_key` in "
+                    f"Set `llm.providers.{provider}.api_key` in "
                     f"{Path('~/.zotomatic/config.toml').expanduser()}."
                 ),
             )
 
+        defaults = LLM_PROVIDER_DEFAULTS.get(provider, {})
         base_url = str(
             provider_settings.get("base_url")
-            or "https://api.openai.com/v1"
+            or defaults.get("base_url")
+            or ""
         )
-        model = str(provider_settings.get("model") or "gpt-4o-mini")
+        model = str(provider_settings.get("model") or defaults.get("model") or "")
         raw_timeout = settings.get("llm_timeout")
         timeout: float = raw_timeout if isinstance(raw_timeout, float) else 30.0
         language_code = str(settings.get("llm_output_language") or "en").strip() or "en"

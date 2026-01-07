@@ -369,7 +369,83 @@ class OpenAILLMClient(BaseLLMClient):
 class GeminiLLMClient(BaseLLMClient):
     """Google Gemini-backed implementation for summaries and tags."""
 
-    ...
+    def __init__(self, config: LLMClientConfig):
+        super().__init__(config)
+        base_url = (
+            config.base_url or "https://generativelanguage.googleapis.com/v1beta"
+        ).rstrip("/")
+        self._http_client = httpx.Client(
+            base_url=base_url,
+            headers={
+                "x-goog-api-key": config.api_key,
+                "Content-Type": "application/json",
+            },
+            timeout=config.timeout,
+        )
+
+    def _close(self):
+        """Implementation of BaseLLMClient._close()"""
+        try:
+            self._http_client.close()
+        except NotImplementedError:
+            self._logger.debug("%s does not implement _close", type(self).__name__)
+        except:
+            self._logger.debug("Internal errors occurred at %s", type(self).__name__)
+
+    def _chat_completion(
+        self,
+        messages: list[dict[str, str]],
+        *,
+        temperature: float,
+        max_tokens: int,
+    ) -> tuple[str, dict[str, Any]]:
+        system_texts: list[str] = []
+        contents: list[dict[str, Any]] = []
+        for message in messages:
+            role = message.get("role")
+            content = message.get("content", "")
+            if role == "system":
+                if content.strip():
+                    system_texts.append(content)
+                continue
+            gemini_role = "model" if role == "assistant" else "user"
+            contents.append(
+                {
+                    "role": gemini_role,
+                    "parts": [{"text": content}],
+                }
+            )
+
+        payload: dict[str, Any] = {
+            "contents": contents,
+            "generationConfig": {
+                "temperature": temperature,
+                "maxOutputTokens": max_tokens,
+            },
+        }
+        if system_texts:
+            payload["system_instruction"] = {
+                "parts": [{"text": "\n".join(system_texts)}]
+            }
+
+        # NOTE: REST API
+        # https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
+        response = self._http_client.post(
+            f"/models/{self._config.model}:generateContent",
+            json=payload,
+        )
+        response.raise_for_status()
+        data = response.json()
+        content: str = ""
+        try:
+            parts = data["candidates"][0]["content"]["parts"]
+            if isinstance(parts, list):
+                content = "".join(
+                    part.get("text", "") for part in parts if isinstance(part, dict)
+                )
+        except (KeyError, IndexError, TypeError):  # pragma: no cover - defensive
+            self._logger.debug("Gemini response missing content field")
+        return content.strip(), data
 
 
 # TODO: ここの処理はzoteroClient, NoteBuilder同様にpipelineでやるべきかも
@@ -378,4 +454,6 @@ def create_llm_client(settings: Mapping[str, object]) -> BaseLLMClient:
     config = LLMClientConfig.from_settings(settings)
     if config.provider == "openai":
         return OpenAILLMClient(config)
+    if config.provider == "gemini":
+        return GeminiLLMClient(config)
     raise ZotomaticLLMClientError(f"Unsupported LLM provider: {config.provider}")

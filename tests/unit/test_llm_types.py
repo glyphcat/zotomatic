@@ -38,6 +38,23 @@ def test_llm_client_config_from_settings() -> None:
     assert config.language_code == "ja"
 
 
+def test_llm_client_config_from_settings_gemini() -> None:
+    config = LLMClientConfig.from_settings({
+        "llm": {
+            "provider": "gemini",
+            "providers": {
+                "gemini": {
+                    "api_key": "gem-key",
+                }
+            },
+        }
+    })
+    assert config.provider == "gemini"
+    assert config.api_key == "gem-key"
+    assert config.model == "gemini-2.5-flash"
+    assert config.base_url == "https://generativelanguage.googleapis.com/v1beta"
+
+
 def test_summary_mode_from_value() -> None:
     assert LLMSummaryMode.from_value("deep") is LLMSummaryMode.DEEP
     assert LLMSummaryMode.from_value("unknown") is LLMSummaryMode.QUICK
