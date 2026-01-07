@@ -14,6 +14,7 @@ from pyzotero import zotero
 from zotomatic import config
 from zotomatic.errors import ZotomaticCLIError, ZotomaticLLMConfigError
 from zotomatic.llm import create_llm_client
+from zotomatic.llm.types import LLM_PROVIDER_DEFAULTS
 from zotomatic.logging import get_logger
 from zotomatic.note.builder import NoteBuilder
 from zotomatic.note.types import (
@@ -424,6 +425,20 @@ def run_init(cli_options: Mapping[str, Any] | None = None):
     else:
         print(f"Template: exists {init_result.template_path}")
 
+    llm_provider = cli_options.get("llm_provider")
+    if llm_provider:
+        provider = str(llm_provider).strip().lower()
+        if provider not in LLM_PROVIDER_DEFAULTS:
+            logger.error("Unsupported LLM provider: %s", provider)
+            return
+        updated = config.update_config_section_value(
+            init_result.config_path, "llm", "provider", provider
+        )
+        if updated:
+            print(f"Config: updated llm.provider={provider}")
+        else:
+            print(f"Config: exists llm.provider={provider}")
+
     db_config = WatcherStateRepositoryConfig.from_settings(settings)
     db_path = db_config.sqlite_path.expanduser()
     db_exists = db_path.exists()
@@ -719,3 +734,69 @@ def run_template_set(cli_options: Mapping[str, Any] | None = None):
         print(f"Config: updated template_path={template_target}")
     else:
         print(f"Config: exists template_path={template_target}")
+
+
+def _resolve_llm_provider(settings: Mapping[str, object]) -> str | None:
+    llm_section = settings.get("llm")
+    if isinstance(llm_section, Mapping):
+        provider = llm_section.get("provider")
+        if provider:
+            return str(provider).strip().lower()
+    return None
+
+
+def run_llm_set(cli_options: Mapping[str, Any] | None = None):
+    logger = get_logger("zotomatic.llm", False)
+    cli_options = dict(cli_options or {})
+    llm_provider = cli_options.get("llm_provider")
+    init_result = config.initialize_config(cli_options)
+    config_path = init_result.config_path
+
+    settings = config.get_config(cli_options)
+    if not llm_provider:
+        llm_provider = _resolve_llm_provider(settings)
+    if not llm_provider:
+        logger.error("Missing required option: --provider")
+        return
+
+    provider = str(llm_provider).strip().lower()
+    if provider not in LLM_PROVIDER_DEFAULTS:
+        logger.error("Unsupported LLM provider: %s", provider)
+        return
+    defaults = LLM_PROVIDER_DEFAULTS.get(provider, {})
+    api_key = cli_options.get("llm_api_key")
+    model = cli_options.get("llm_model") or defaults.get("model")
+    base_url = cli_options.get("llm_base_url") or defaults.get("base_url")
+
+    updates: list[str] = []
+    if config.update_config_section_value(config_path, "llm", "provider", provider):
+        updates.append("llm.provider")
+    if api_key is not None:
+        if config.update_config_section_value(
+            config_path,
+            f"llm.providers.{provider}",
+            "api_key",
+            api_key,
+        ):
+            updates.append(f"llm.providers.{provider}.api_key")
+    if model:
+        if config.update_config_section_value(
+            config_path,
+            f"llm.providers.{provider}",
+            "model",
+            model,
+        ):
+            updates.append(f"llm.providers.{provider}.model")
+    if base_url:
+        if config.update_config_section_value(
+            config_path,
+            f"llm.providers.{provider}",
+            "base_url",
+            base_url,
+        ):
+            updates.append(f"llm.providers.{provider}.base_url")
+
+    if updates:
+        print(f"Config: updated {', '.join(updates)}")
+    else:
+        print("Config: LLM settings already up to date")

@@ -14,6 +14,18 @@ from zotomatic.note.types import NoteBuilderContext
 ChatRole = Literal["system", "user", "assistant"]
 
 
+LLM_PROVIDER_DEFAULTS: dict[str, dict[str, str]] = {
+    "openai": {
+        "model": "gpt-4o-mini",
+        "base_url": "https://api.openai.com/v1",
+    },
+    "gemini": {
+        "model": "gemini-1.5-pro",
+        "base_url": "https://generativelanguage.googleapis.com/v1beta",
+    },
+}
+
+
 # --- Config. ---
 @dataclass(frozen=True, slots=True)
 class LLMClientConfig:

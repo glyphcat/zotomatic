@@ -186,6 +186,74 @@ def update_config_value(config_path: Path, key: str, value: Any) -> bool:
     return True
 
 
+def update_config_section_value(
+    config_path: Path,
+    section: str,
+    key: str,
+    value: Any,
+) -> bool:
+    rendered = f"{key} = {_render_value(value)}"
+    if not config_path.exists():
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+        config_path.write_text(f"[{section}]\n{rendered}\n", encoding="utf-8")
+        return True
+
+    text = config_path.read_text(encoding="utf-8")
+    lines = text.splitlines()
+    section_header = f"[{section}]"
+    header_pattern = re.compile(r"^\s*\[(.+)\]\s*$")
+    key_pattern = re.compile(rf"^\s*{re.escape(key)}\s*=")
+
+    section_found = False
+    in_section = False
+    for idx, line in enumerate(lines):
+        header_match = header_pattern.match(line)
+        if header_match:
+            current = header_match.group(1).strip()
+            in_section = current == section
+            if in_section:
+                section_found = True
+            continue
+        if in_section and key_pattern.match(line):
+            if line.strip() == rendered:
+                return False
+            lines[idx] = rendered
+            updated = "\n".join(lines)
+            if text.endswith("\n"):
+                updated += "\n"
+            config_path.write_text(updated, encoding="utf-8")
+            return True
+
+    if section_found:
+        insert_at = len(lines)
+        in_section = False
+        for idx, line in enumerate(lines):
+            header_match = header_pattern.match(line)
+            if header_match:
+                current = header_match.group(1).strip()
+                if current == section:
+                    in_section = True
+                    continue
+                if in_section:
+                    insert_at = idx
+                    break
+        lines.insert(insert_at, rendered)
+        updated = "\n".join(lines)
+        if text.endswith("\n"):
+            updated += "\n"
+        config_path.write_text(updated, encoding="utf-8")
+        return True
+
+    if lines and lines[-1].strip():
+        lines.append("")
+    lines.append(section_header)
+    lines.append(rendered)
+    updated = "\n".join(lines)
+    updated += "\n"
+    config_path.write_text(updated, encoding="utf-8")
+    return True
+
+
 def _load_file_config(path: Path) -> dict[str, Any]:
     if tomllib is None or not path.is_file():
         return {}

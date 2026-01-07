@@ -21,6 +21,28 @@ def test_update_config_value_creates_and_updates(tmp_path: Path) -> None:
     assert "/tmp/notes2" in cfg.read_text(encoding="utf-8")
 
 
+def test_update_config_section_value_creates_and_updates(tmp_path: Path) -> None:
+    cfg = tmp_path / "config.toml"
+    created = config.update_config_section_value(
+        cfg, "llm.providers.openai", "api_key", "key"
+    )
+    assert created is True
+    text = cfg.read_text(encoding="utf-8")
+    assert "[llm.providers.openai]" in text
+    assert "api_key = \"key\"" in text
+
+    updated = config.update_config_section_value(
+        cfg, "llm.providers.openai", "api_key", "key"
+    )
+    assert updated is False
+
+    updated = config.update_config_section_value(
+        cfg, "llm.providers.openai", "api_key", "key2"
+    )
+    assert updated is True
+    assert "api_key = \"key2\"" in cfg.read_text(encoding="utf-8")
+
+
 def test_initialize_config_creates_files(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     templates_dir = tmp_path / "templates"
     templates_dir.mkdir()

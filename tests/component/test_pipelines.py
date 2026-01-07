@@ -104,6 +104,68 @@ def test_run_init(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytes
     assert "DB:" in captured.out
 
 
+def test_run_init_with_llm_provider(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    config_path = tmp_path / "config.toml"
+    template_path = tmp_path / "note.md"
+    db_path = tmp_path / "state.db"
+    templates_dir = tmp_path / "templates"
+    templates_dir.mkdir()
+    source_template = templates_dir / "note.md"
+    source_template.write_text("Template", encoding="utf-8")
+    monkeypatch.setattr(pipelines.config, "_DEFAULT_CONFIG", config_path)
+    monkeypatch.setattr(pipelines.config, "_TEMPLATES_DIR", templates_dir)
+    monkeypatch.setattr(
+        pipelines.WatcherStateRepositoryConfig,
+        "from_settings",
+        lambda _settings: WatcherStateRepositoryConfig(sqlite_path=db_path),
+    )
+    monkeypatch.setattr(
+        pipelines.WatcherStateRepository, "from_settings", lambda _settings: object()
+    )
+
+    pipelines.run_init(
+        {
+            "pdf_dir": str(tmp_path / "pdfs"),
+            "note_dir": str(tmp_path / "notes"),
+            "template_path": str(template_path),
+            "llm_provider": "openai",
+        }
+    )
+
+    captured = capsys.readouterr()
+    assert "Config: updated llm.provider=openai" in captured.out
+    text = config_path.read_text(encoding="utf-8")
+    assert "[llm]" in text
+    assert "provider = \"openai\"" in text
+
+
+def test_run_llm_set(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+    config_path = tmp_path / "config.toml"
+    templates_dir = tmp_path / "templates"
+    templates_dir.mkdir()
+    source_template = templates_dir / "note.md"
+    source_template.write_text("Template", encoding="utf-8")
+    monkeypatch.setattr(pipelines.config, "_DEFAULT_CONFIG", config_path)
+    monkeypatch.setattr(pipelines.config, "_TEMPLATES_DIR", templates_dir)
+
+    pipelines.run_llm_set(
+        {
+            "llm_provider": "openai",
+            "llm_api_key": "key",
+        }
+    )
+
+    captured = capsys.readouterr()
+    assert "Config: updated" in captured.out
+    text = config_path.read_text(encoding="utf-8")
+    assert "[llm]" in text
+    assert "provider = \"openai\"" in text
+    assert "[llm.providers.openai]" in text
+    assert "api_key = \"key\"" in text
+
+
 def test_run_scan_path_mode(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

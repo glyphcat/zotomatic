@@ -70,6 +70,36 @@ def _build_parser() -> argparse.ArgumentParser:
         dest="template_path",
         help="Path to the note template",
     )
+    init.add_argument(
+        "--llm-provider",
+        dest="llm_provider",
+        choices=["openai", "gemini"],
+        help="Optional LLM provider (openai, gemini)",
+    )
+    llm = subparsers.add_parser("llm", help="Manage LLM settings")
+    llm_subparsers = llm.add_subparsers(dest="llm_command", required=True)
+    llm_set = llm_subparsers.add_parser("set", help="Set LLM configuration values")
+    llm_set.add_argument(
+        "--provider",
+        dest="llm_provider",
+        choices=["openai", "gemini"],
+        help="LLM provider (openai, gemini)",
+    )
+    llm_set.add_argument(
+        "--api-key",
+        dest="llm_api_key",
+        help="LLM API key",
+    )
+    llm_set.add_argument(
+        "--model",
+        dest="llm_model",
+        help="LLM model name",
+    )
+    llm_set.add_argument(
+        "--base-url",
+        dest="llm_base_url",
+        help="LLM base URL",
+    )
     template = subparsers.add_parser("template", help="Manage note templates")
     template_subparsers = template.add_subparsers(
         dest="template_command", required=True
@@ -103,6 +133,7 @@ def _print_help() -> None:
     print("  config default        Reset config to defaults")
     print("  doctor                Inspect project health")
     print("  init                  Initialize a Zotomatic workspace")
+    print("  llm                   Manage LLM settings")
     print("  template create       Create a template and update config")
     print("  template set          Update config to use an existing template")
     print("")
@@ -121,6 +152,12 @@ def _print_help() -> None:
     print("    --pdf-dir PATH      (required) Directory containing PDF files")
     print("    --note-dir PATH     Override default note directory")
     print("    --template-path PATH  Override default template path")
+    print("    --llm-provider      Optional LLM provider (openai, gemini)")
+    print("  llm set:")
+    print("    --provider          LLM provider (openai, gemini)")
+    print("    --api-key           LLM API key")
+    print("    --model             LLM model name")
+    print("    --base-url          LLM base URL")
     print("  template create/set:")
     print("    --path PATH         (required) Template file path")
 
@@ -149,6 +186,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         "init": pipelines.run_init,
         "template": None,
         "config": None,
+        "llm": None,
     }
 
     command = args.command
@@ -174,6 +212,13 @@ def main(argv: Sequence[str] | None = None) -> None:
                 pipelines.run_config_default(cli_options)
             else:  # pragma: no cover - argparse enforces choices
                 raise ZotomaticCLIError(f"Unknown config command: {config_command}")
+            return
+        if command == "llm":
+            llm_command = args.llm_command
+            if llm_command == "set":
+                pipelines.run_llm_set(cli_options)
+            else:  # pragma: no cover - argparse enforces choices
+                raise ZotomaticCLIError(f"Unknown llm command: {llm_command}")
             return
 
         handler = handlers[command]
