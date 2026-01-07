@@ -73,8 +73,8 @@ def _build_parser() -> argparse.ArgumentParser:
     init.add_argument(
         "--llm-provider",
         dest="llm_provider",
-        choices=["openai", "gemini"],
-        help="Optional LLM provider (openai, gemini)",
+        choices=["openai", "gemini", "chatgpt"],
+        help="Optional LLM provider (openai, gemini, chatgpt)",
     )
     llm = subparsers.add_parser("llm", help="Manage LLM settings")
     llm_subparsers = llm.add_subparsers(dest="llm_command", required=True)
@@ -82,8 +82,8 @@ def _build_parser() -> argparse.ArgumentParser:
     llm_set.add_argument(
         "--provider",
         dest="llm_provider",
-        choices=["openai", "gemini"],
-        help="LLM provider (openai, gemini)",
+        choices=["openai", "gemini", "chatgpt"],
+        help="LLM provider (openai, gemini, chatgpt)",
     )
     llm_set.add_argument(
         "--api-key",
@@ -152,9 +152,9 @@ def _print_help() -> None:
     print("    --pdf-dir PATH      (required) Directory containing PDF files")
     print("    --note-dir PATH     Override default note directory")
     print("    --template-path PATH  Override default template path")
-    print("    --llm-provider      Optional LLM provider (openai, gemini)")
+    print("    --llm-provider      Optional LLM provider (openai, gemini, chatgpt)")
     print("  llm set:")
-    print("    --provider          LLM provider (openai, gemini)")
+    print("    --provider          LLM provider (openai, gemini, chatgpt)")
     print("    --api-key           LLM API key")
     print("    --model             LLM model name")
     print("    --base-url          LLM base URL")
@@ -168,6 +168,9 @@ def _normalize_cli_options(namespace: argparse.Namespace) -> dict[str, Any]:
         for key, value in vars(namespace).items()
         if key not in {"command", "template_command", "config_command"}
     }
+    provider = cli_options.get("llm_provider")
+    if provider == "chatgpt":
+        cli_options["llm_provider"] = "openai"
     return {key: value for key, value in cli_options.items() if value is not None}
 
 
