@@ -17,6 +17,7 @@ ChatRole = Literal["system", "user", "assistant"]
 # --- Config. ---
 @dataclass(frozen=True, slots=True)
 class LLMClientConfig:
+    provider: str
     base_url: str
     api_key: str
     model: str
@@ -26,28 +27,73 @@ class LLMClientConfig:
 
     # TODO: base_urlを必須にするかどうか。メジャーLLMはサービス名だけ設定するのでもいいかも
 
+    @staticmethod
+    def _get_llm_section(settings: Mapping[str, object]) -> Mapping[str, object]:
+        llm_section = settings.get("llm")
+        if isinstance(llm_section, Mapping):
+            return llm_section
+        return {}
+
+    @classmethod
+    def _get_provider(cls, settings: Mapping[str, object]) -> str:
+        llm_section = cls._get_llm_section(settings)
+        provider = llm_section.get("provider")
+        if provider:
+            return str(provider).strip().lower()
+        return ""
+
+    @classmethod
+    def _get_provider_settings(
+        cls, settings: Mapping[str, object], provider: str
+    ) -> Mapping[str, object]:
+        llm_section = cls._get_llm_section(settings)
+        providers = llm_section.get("providers")
+        if not isinstance(providers, Mapping):
+            return {}
+        provider_settings = providers.get(provider)
+        if isinstance(provider_settings, Mapping):
+            return provider_settings
+        return {}
+
     @classmethod
     def from_settings(cls, settings: Mapping[str, object]) -> LLMClientConfig:
-        api_key = str(settings.get("llm_openai_api_key") or "").strip()
+        provider = cls._get_provider(settings)
+        if not provider:
+            raise ZotomaticLLMConfigError(
+                "`llm.provider` must be configured before using the LLM client.",
+                hint=(
+                    f"Set `[llm] provider = \"openai\"` in "
+                    f"{Path('~/.zotomatic/config.toml').expanduser()}."
+                ),
+            )
+        if provider != "openai":
+            raise ZotomaticLLMConfigError(
+                f"Unsupported LLM provider: {provider}.",
+                hint="Only the OpenAI provider is supported in this version.",
+            )
+
+        provider_settings = cls._get_provider_settings(settings, provider)
+        api_key = str(provider_settings.get("api_key") or "").strip()
         if not api_key:
             raise ZotomaticLLMConfigError(
-                "`llm_openai_api_key` must be configured before using the LLM client.",
+                "`llm.providers.openai.api_key` must be configured before using the LLM client.",
                 hint=(
-                    f"Set `llm_openai_api_key` in "
-                    f"{Path('~/.zotomatic/config.toml').expanduser()} or export "
-                    "ZOTOMATIC_LLM_OPENAI_API_KEY."
+                    f"Set `llm.providers.openai.api_key` in "
+                    f"{Path('~/.zotomatic/config.toml').expanduser()}."
                 ),
             )
 
         base_url = str(
-            settings.get("llm_openai_base_url") or "https://api.openai.com/v1"
+            provider_settings.get("base_url")
+            or "https://api.openai.com/v1"
         )
-        model = str(settings.get("llm_openai_model") or "gpt-4o-mini")
+        model = str(provider_settings.get("model") or "gpt-4o-mini")
         raw_timeout = settings.get("llm_timeout")
         timeout: float = raw_timeout if isinstance(raw_timeout, float) else 30.0
         language_code = str(settings.get("llm_output_language") or "en").strip() or "en"
 
         return cls(
+            provider=provider,
             base_url=base_url,
             api_key=api_key,
             model=model,

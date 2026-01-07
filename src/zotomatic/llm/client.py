@@ -376,4 +376,6 @@ class GeminiLLMClient(BaseLLMClient):
 def create_llm_client(settings: Mapping[str, object]) -> BaseLLMClient:
     # TODO: インスタンス生成処理拡張. settingsからモデルに応じたインスタンスを返却するよう修正
     config = LLMClientConfig.from_settings(settings)
-    return OpenAILLMClient(config)
+    if config.provider == "openai":
+        return OpenAILLMClient(config)
+    raise ZotomaticLLMClientError(f"Unsupported LLM provider: {config.provider}")

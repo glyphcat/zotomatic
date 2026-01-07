@@ -50,11 +50,9 @@ def test_get_config_merges_sources(tmp_path: Path, monkeypatch: pytest.MonkeyPat
     cfg_path.write_text("note_dir = \"/file\"\n", encoding="utf-8")
     monkeypatch.setattr(config, "_DEFAULT_CONFIG", cfg_path)
     monkeypatch.setenv("ZOTOMATIC_NOTE_DIR", "/env")
-    monkeypatch.setenv("ZOTOMATIC_LLM_OPENAI_BASE_URL", "http://example.com")
 
     merged = config.get_config({"note_dir": "/cli"})
     assert merged["note_dir"] == "/cli"
-    assert merged["llm_openai_base_url"] == config._DEFAULT_SETTINGS["llm_openai_base_url"]
     assert merged["config_path"] == str(cfg_path)
 
 
