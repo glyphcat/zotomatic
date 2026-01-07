@@ -59,7 +59,10 @@ def test_run_doctor(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         "pdf_dir": str(pdf_dir),
         "note_dir": str(note_dir),
         "template_path": str(template_path),
-        "llm_openai_api_key": "",
+        "llm": {
+            "provider": "openai",
+            "providers": {"openai": {"api_key": ""}},
+        },
         "zotero_api_key": "",
         "zotero_library_id": "",
         "zotero_library_scope": "user",
@@ -419,6 +422,43 @@ def test_run_config_show_filters_internal_keys(
     assert "(default)" in captured.out
     assert "pdf_dir" in captured.out
     assert "(unset)" in captured.out
+
+
+def test_run_config_show_masks_llm_api_key(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    settings = {
+        "note_dir": ("/notes", "default"),
+        "llm": (
+            {
+                "provider": "openai",
+                "providers": {
+                    "openai": {
+                        "api_key": "secret-key",
+                        "model": "gpt-4o-mini",
+                    }
+                },
+            },
+            "file",
+        ),
+    }
+
+    monkeypatch.setattr(
+        pipelines.config, "get_config_with_sources", lambda _opts: settings
+    )
+    monkeypatch.setattr(
+        pipelines.config,
+        "user_config_keys",
+        lambda: {"note_dir"},
+    )
+
+    result = pipelines.run_config_show({})
+    assert result == 0
+    captured = capsys.readouterr()
+    assert "llm.provider" in captured.out
+    assert "llm.providers.openai.api_key" in captured.out
+    assert "secret-key" not in captured.out
+    assert "llm.providers.openai.model" in captured.out
 
 
 def test_run_config_default(

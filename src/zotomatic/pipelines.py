@@ -549,14 +549,33 @@ def run_doctor(cli_options: Mapping[str, Any] | None = None):
         else:
             _ok("Template", f"template file exists: {template_file}")
 
-    llm_api_key = str(settings.get("llm_openai_api_key") or "").strip()
-    if not llm_api_key:
-        _warn(
-            "LLM",
-            "llm_openai_api_key is not set; LLM summary/tag generation is disabled",
-        )
-    else:
-        _ok("LLM", "llm_openai_api_key is configured")
+    summary_enabled = bool(settings.get("llm_summary_enabled", True))
+    tag_enabled = bool(settings.get("llm_tag_enabled", True))
+    if summary_enabled or tag_enabled:
+        llm_section = settings.get("llm")
+        provider = None
+        provider_settings = None
+        if isinstance(llm_section, Mapping):
+            provider = str(llm_section.get("provider") or "").strip().lower()
+            providers = llm_section.get("providers")
+            if provider and isinstance(providers, Mapping):
+                provider_settings = providers.get(provider)
+        if not provider:
+            _warn(
+                "LLM",
+                "LLM summaries/tags are enabled, but llm.provider is not set",
+            )
+        else:
+            api_key = ""
+            if isinstance(provider_settings, Mapping):
+                api_key = str(provider_settings.get("api_key") or "").strip()
+            if not api_key:
+                _warn(
+                    "LLM",
+                    f"LLM provider is '{provider}', but api_key is missing; summaries/tags will be skipped",
+                )
+            else:
+                _ok("LLM", f"LLM provider '{provider}' is configured")
 
     daily_limit = settings.get("llm_daily_limit")
     try:
@@ -633,13 +652,29 @@ def run_config_show(cli_options: Mapping[str, Any] | None = None):
     settings = config.get_config_with_sources(cli_options)
     keys = config.user_config_keys()
     visible_items = {k: settings.get(k, (None, "unset")) for k in keys}
+    llm_entry = settings.get("llm")
+    if llm_entry:
+        llm_value, llm_source = llm_entry
+        if isinstance(llm_value, Mapping):
+            provider = llm_value.get("provider")
+            if provider is not None:
+                visible_items["llm.provider"] = (provider, llm_source)
+            providers = llm_value.get("providers")
+            if provider and isinstance(providers, Mapping):
+                provider_settings = providers.get(str(provider))
+                if isinstance(provider_settings, Mapping):
+                    for item_key in ("api_key", "model", "base_url"):
+                        if item_key in provider_settings:
+                            visible_items[
+                                f"llm.providers.{provider}.{item_key}"
+                            ] = (provider_settings.get(item_key), llm_source)
     if not visible_items:
         print("No configurable settings available.")
         return 0
     width = max(len(key) for key in visible_items)
     rendered: dict[str, str] = {}
     for key, (value, _source) in visible_items.items():
-        if key == "llm_openai_api_key" and value:
+        if key.startswith("llm.providers.") and key.endswith(".api_key") and value:
             raw = str(value)
             if len(raw) <= 8:
                 masked = "***"
