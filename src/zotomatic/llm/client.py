@@ -311,9 +311,6 @@ class BaseLLMClient(ABC):
 class OpenAILLMClient(BaseLLMClient):
     """OpenAI ChatGPT-backed implementation for summaries and tags."""
 
-    _DEEP_CHUNK_SENTENCE_RANGE = (3, 5)
-    _DEEP_REDUCE_SENTENCE_RANGE = (6, 8)
-
     def __init__(self, config: LLMClientConfig):
         super().__init__(config)
         base_url = (config.base_url or "https://api.openai.com/v1").rstrip("/")
