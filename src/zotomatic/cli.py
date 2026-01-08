@@ -92,7 +92,6 @@ def _build_parser() -> argparse.ArgumentParser:
     llm_set.add_argument(
         "--api-key",
         dest="llm_api_key",
-        required=True,
         help="LLM API key",
     )
     llm_set.add_argument(
@@ -161,7 +160,7 @@ def _print_help() -> None:
     print("    --llm-provider      Optional LLM provider (openai, gemini, chatgpt)")
     print("  llm set:")
     print("    --provider          (required) LLM provider (openai, gemini, chatgpt)")
-    print("    --api-key           (required) LLM API key")
+    print("    --api-key           LLM API key")
     print("    --model             LLM model name")
     print("    --base-url          LLM base URL")
     print("  template create/set:")
