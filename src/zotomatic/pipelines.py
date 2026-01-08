@@ -850,10 +850,20 @@ def run_llm_set(cli_options: Mapping[str, Any] | None = None):
         ):
             updates.append(f"llm.providers.{provider}.api_key")
     else:
-        print(
-            "Warning: API key not provided; set "
-            f"ZOTOMATIC_LLM_{provider.upper()}_API_KEY to enable LLM calls."
-        )
+        provider_settings = {}
+        llm_section = settings.get("llm")
+        if isinstance(llm_section, Mapping):
+            providers = llm_section.get("providers")
+            if isinstance(providers, Mapping):
+                provider_settings = providers.get(provider, {}) or {}
+        existing_key = ""
+        if isinstance(provider_settings, Mapping):
+            existing_key = str(provider_settings.get("api_key") or "").strip()
+        if not existing_key:
+            print(
+                "Warning: API key not provided; set "
+                f"ZOTOMATIC_LLM_{provider.upper()}_API_KEY to enable LLM calls."
+            )
     if model:
         if config.update_config_section_value(
             config_path,
