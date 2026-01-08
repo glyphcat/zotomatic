@@ -102,9 +102,9 @@ def test_run_init(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytes
     )
 
     captured = capsys.readouterr()
-    assert "Config:" in captured.out
-    assert "Template:" in captured.out
-    assert "DB:" in captured.out
+    assert "Config " in captured.out
+    assert "Template " in captured.out
+    assert "DB " in captured.out
 
 
 def test_run_init_with_llm_provider(
@@ -161,7 +161,7 @@ def test_run_llm_set(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: py
     )
 
     captured = capsys.readouterr()
-    assert "Config: updated" in captured.out
+    assert "LLM settings updated" in captured.out
     text = config_path.read_text(encoding="utf-8")
     assert "[llm]" in text
     assert "provider = \"openai\"" in text
@@ -484,8 +484,8 @@ def test_run_config_default(
     result = pipelines.run_config_default({})
     assert result == 0
     captured = capsys.readouterr()
-    assert "Config: reset to defaults" in captured.out
-    assert "Config: backup created" in captured.out
-    assert "Template:" in captured.out
+    assert "Config reset to defaults" in captured.out
+    assert "Config backup created" in captured.out
+    assert "Template " in captured.out
     assert cfg_path.exists()
     assert cfg_path.with_name("config.toml.bak").exists()

@@ -411,19 +411,19 @@ def run_init(cli_options: Mapping[str, Any] | None = None):
     settings = config.get_config(cli_options)
 
     if init_result.config_created:
-        print(f"Config: created {init_result.config_path}")
+        print(f"Config created: {init_result.config_path}")
     elif init_result.config_updated_keys:
         print(
-            f"Config: updated {init_result.config_path} "
+            f"Config updated: {init_result.config_path} "
             f"(added: {', '.join(init_result.config_updated_keys)})"
         )
     else:
-        print(f"Config: exists {init_result.config_path}")
+        print(f"Config exists: {init_result.config_path}")
 
     if init_result.template_created:
-        print(f"Template: created {init_result.template_path}")
+        print(f"Template created: {init_result.template_path}")
     else:
-        print(f"Template: exists {init_result.template_path}")
+        print(f"Template exists: {init_result.template_path}")
 
     llm_provider = cli_options.get("llm_provider")
     if llm_provider:
@@ -449,9 +449,9 @@ def run_init(cli_options: Mapping[str, Any] | None = None):
         return
 
     if db_exists:
-        print(f"DB: exists {db_path}")
+        print(f"DB exists: {db_path}")
     else:
-        print(f"DB: initialized {db_path}")
+        print(f"DB initialized: {db_path}")
 
 
 def stub_run_backfill(cli_options: Mapping[str, Any] | None = None): ...
@@ -705,14 +705,14 @@ def run_config_show(cli_options: Mapping[str, Any] | None = None):
 def run_config_default(cli_options: Mapping[str, Any] | None = None):
     _ = cli_options
     result = config.reset_config_to_defaults()
-    print(f"Config: reset to defaults at {result.config_path}")
+    print(f"Config reset to defaults: {result.config_path}")
     if result.backup_path:
-        print(f"Config: backup created at {result.backup_path}")
-    print("Config: set pdf_dir before running scan")
+        print(f"Config backup created: {result.backup_path}")
+    print("Warning: set pdf_dir before running scan")
     if result.template_created:
-        print(f"Template: created {result.template_path}")
+        print(f"Template created: {result.template_path}")
     else:
-        print(f"Template: exists {result.template_path}")
+        print(f"Template exists: {result.template_path}")
     return 0
 
 
@@ -720,16 +720,16 @@ def run_config_migrate(cli_options: Mapping[str, Any] | None = None):
     _ = cli_options
     result = config.migrate_config()
     if not result.updated_keys and not result.removed_keys:
-        print("Config: no migration needed")
+        print("Config migration not needed")
         return 0
-    print(f"Config: migrated {result.config_path}")
+    print(f"Config migrated: {result.config_path}")
     if result.backup_path:
-        print(f"Config: backup created at {result.backup_path}")
+        print(f"Config backup created: {result.backup_path}")
     if result.updated_keys:
-        print(f"Config: updated {', '.join(result.updated_keys)}")
+        print(f"Updated keys: {', '.join(result.updated_keys)}")
     if result.removed_keys:
         unique_removed = sorted(set(result.removed_keys))
-        print(f"Config: removed {', '.join(unique_removed)}")
+        print(f"Removed keys: {', '.join(unique_removed)}")
     return 0
 
 
@@ -748,7 +748,7 @@ def run_template_create(cli_options: Mapping[str, Any] | None = None):
 
     template_target = Path(str(template_path)).expanduser()
     if template_target.exists():
-        print(f"Template: exists {template_target}")
+        print(f"Template exists: {template_target}")
     else:
         template_target.parent.mkdir(parents=True, exist_ok=True)
         source_template = Path(__file__).resolve().parent / "templates" / "note.md"
@@ -759,12 +759,12 @@ def run_template_create(cli_options: Mapping[str, Any] | None = None):
             source_template.read_text(encoding="utf-8"),
             encoding="utf-8",
         )
-        print(f"Template: created {template_target}")
+        print(f"Template created: {template_target}")
 
     if updated:
-        print(f"Config: updated template_path={template_target}")
+        print(f"Config updated: template_path={template_target}")
     else:
-        print(f"Config: exists template_path={template_target}")
+        print(f"Config exists: template_path={template_target}")
 
 
 def run_template_set(cli_options: Mapping[str, Any] | None = None):
@@ -783,9 +783,9 @@ def run_template_set(cli_options: Mapping[str, Any] | None = None):
     if not template_target.exists():
         logger.warning("Template not found: %s", template_target)
     if updated:
-        print(f"Config: updated template_path={template_target}")
+        print(f"Config updated: template_path={template_target}")
     else:
-        print(f"Config: exists template_path={template_target}")
+        print(f"Config exists: template_path={template_target}")
 
 
 def _resolve_llm_provider(settings: Mapping[str, object]) -> str | None:
@@ -833,8 +833,8 @@ def run_llm_set(cli_options: Mapping[str, Any] | None = None):
             updates.append(f"llm.providers.{provider}.api_key")
     else:
         print(
-            "Config: api_key was not provided; set an env var "
-            f"ZOTOMATIC_LLM_{provider.upper()}_API_KEY to use the LLM."
+            "Warning: API key not provided; set "
+            f"ZOTOMATIC_LLM_{provider.upper()}_API_KEY to enable LLM calls."
         )
     if model:
         if config.update_config_section_value(
@@ -854,6 +854,6 @@ def run_llm_set(cli_options: Mapping[str, Any] | None = None):
             updates.append(f"llm.providers.{provider}.base_url")
 
     if updates:
-        print(f"Config: updated {', '.join(updates)}")
+        print(f"LLM settings updated: {', '.join(updates)}")
     else:
-        print("Config: LLM settings already up to date")
+        print("LLM settings already up to date")
