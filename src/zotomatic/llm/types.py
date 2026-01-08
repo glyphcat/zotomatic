@@ -20,7 +20,7 @@ LLM_PROVIDER_DEFAULTS: dict[str, dict[str, str]] = {
         "base_url": "https://api.openai.com/v1",
     },
     "gemini": {
-        "model": "gemini-2.5-flash",
+        "model": "gemini-2.0-flash",
         "base_url": "https://generativelanguage.googleapis.com/v1beta",
     },
 }

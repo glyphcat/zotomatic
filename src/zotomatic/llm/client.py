@@ -29,6 +29,11 @@ class BaseLLMClient(ABC):
     # チャンキング設定(定数)
     _DEEP_CHUNK_SENTENCE_RANGE = (3, 5)
     _DEEP_REDUCE_SENTENCE_RANGE = (6, 8)
+    _SUMMARY_QUICK_MAX_TOKENS = 600
+    _SUMMARY_STANDARD_MAX_TOKENS = 900
+    _SUMMARY_DEEP_CHUNK_MAX_TOKENS = 400
+    _SUMMARY_DEEP_REDUCE_MAX_TOKENS = 900
+    _TAGS_MAX_TOKENS = 400
 
     def __init__(self, config: LLMClientConfig):
         self._config = config
@@ -80,7 +85,7 @@ class BaseLLMClient(ABC):
         summary, response = self._chat_completion(
             messages,
             temperature=self._config.temperature,
-            max_tokens=320,
+            max_tokens=self._SUMMARY_QUICK_MAX_TOKENS,
         )
         return summary, response
 
@@ -120,7 +125,7 @@ class BaseLLMClient(ABC):
         summary, response = self._chat_completion(
             messages,
             temperature=self._config.temperature,
-            max_tokens=400,
+            max_tokens=self._SUMMARY_STANDARD_MAX_TOKENS,
         )
         return summary, {"mode": "standard", "response": response}
 
@@ -158,7 +163,7 @@ class BaseLLMClient(ABC):
             summary, response = self._chat_completion(
                 messages,
                 temperature=self._config.temperature,
-                max_tokens=280,
+                max_tokens=self._SUMMARY_DEEP_CHUNK_MAX_TOKENS,
             )
             chunk_summaries.append(summary)
             chunk_responses.append(response)
@@ -188,7 +193,7 @@ class BaseLLMClient(ABC):
         summary, reduce_response = self._chat_completion(
             messages,
             temperature=self._config.temperature,
-            max_tokens=480,
+            max_tokens=self._SUMMARY_DEEP_REDUCE_MAX_TOKENS,
         )
 
         return summary, {
@@ -289,7 +294,7 @@ class BaseLLMClient(ABC):
         result, raw_response = self._chat_completion(
             messages,
             temperature=self._config.temperature,
-            max_tokens=320,
+            max_tokens=self._TAGS_MAX_TOKENS,
         )
         tags: list[str] = []
         if result:
@@ -366,6 +371,15 @@ class OpenAILLMClient(BaseLLMClient):
 class GeminiLLMClient(BaseLLMClient):
     """Google Gemini-backed implementation for summaries and tags."""
 
+    # NOTE:
+    # Gemini 2.5 counts hidden "thoughts" tokens against maxOutputTokens,
+    # so we raise defaults to avoid truncated outputs.
+    _SUMMARY_QUICK_MAX_TOKENS = 1200
+    _SUMMARY_STANDARD_MAX_TOKENS = 2000
+    _SUMMARY_DEEP_CHUNK_MAX_TOKENS = 1200
+    _SUMMARY_DEEP_REDUCE_MAX_TOKENS = 2200
+    _TAGS_MAX_TOKENS = 800
+
     def __init__(self, config: LLMClientConfig):
         super().__init__(config)
         base_url = (
@@ -426,7 +440,7 @@ class GeminiLLMClient(BaseLLMClient):
             }
 
         # NOTE: REST API
-        # https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
+        # https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent
         response = self._http_client.post(
             f"/models/{self._config.model}:generateContent",
             json=payload,

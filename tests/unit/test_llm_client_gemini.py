@@ -39,7 +39,7 @@ def _create_config() -> LLMClientConfig:
         provider="gemini",
         base_url="https://generativelanguage.googleapis.com/v1beta",
         api_key="key",
-        model="gemini-2.5-flash",
+        model="gemini-2.0-flash",
         timeout=5.0,
         language_code="en",
     )
@@ -66,7 +66,7 @@ def test_gemini_chat_completion_builds_payload() -> None:
 
     assert result == "Hello world"
     assert raw == payload
-    assert fake_http.last_url == "/models/gemini-2.5-flash:generateContent"
+    assert fake_http.last_url == "/models/gemini-2.0-flash:generateContent"
     assert fake_http.last_json is not None
     assert fake_http.last_json["system_instruction"] == {
         "parts": [{"text": "System prompt"}]

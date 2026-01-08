@@ -51,7 +51,7 @@ def test_llm_client_config_from_settings_gemini() -> None:
     })
     assert config.provider == "gemini"
     assert config.api_key == "gem-key"
-    assert config.model == "gemini-2.5-flash"
+    assert config.model == "gemini-2.0-flash"
     assert config.base_url == "https://generativelanguage.googleapis.com/v1beta"
 
 
