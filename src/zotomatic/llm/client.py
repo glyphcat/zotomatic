@@ -9,7 +9,7 @@ from typing import Any, Mapping
 import httpx
 
 from zotomatic import i18n
-from zotomatic.errors import ZotomaticLLMClientError
+from zotomatic.errors import ZotomaticLLMAPIError, ZotomaticLLMClientError
 from zotomatic.llm import prompts
 from zotomatic.logging import get_logger
 from zotomatic.utils import pdf
@@ -431,7 +431,34 @@ class GeminiLLMClient(BaseLLMClient):
             f"/models/{self._config.model}:generateContent",
             json=payload,
         )
-        response.raise_for_status()
+        try:
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            status_code = exc.response.status_code
+            message = f"Gemini API error ({status_code})"
+            try:
+                data = exc.response.json()
+            except ValueError:
+                data = None
+            if isinstance(data, dict):
+                error = data.get("error")
+                if isinstance(error, dict):
+                    detail = str(error.get("message") or "").strip()
+                    status = str(error.get("status") or "").strip()
+                    code = error.get("code")
+                    code_text = str(code).strip() if code is not None else ""
+                    parts = [item for item in (code_text, status) if item]
+                    label = " ".join(parts)
+                    if detail:
+                        if label:
+                            message = f"Gemini API error ({label}): {detail}"
+                        else:
+                            message = f"Gemini API error: {detail}"
+                    elif label:
+                        message = f"Gemini API error ({label})"
+            elif exc.response.text:
+                message = f"Gemini API error ({status_code}): {exc.response.text}"
+            raise ZotomaticLLMAPIError(message) from exc
         data = response.json()
         content: str = ""
         try:
