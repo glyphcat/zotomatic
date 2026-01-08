@@ -885,3 +885,4 @@ def run_llm_set(cli_options: Mapping[str, Any] | None = None):
         print(f"LLM settings updated: {', '.join(updates)}")
     else:
         print("LLM settings already up to date")
+    config.migrate_config(config_path)
