@@ -52,6 +52,9 @@ def _build_parser() -> argparse.ArgumentParser:
     config_subparsers = config_parser.add_subparsers(dest="config_command")
     config_subparsers.add_parser("show", help="Show effective configuration values")
     config_subparsers.add_parser("default", help="Reset config to defaults")
+    config_subparsers.add_parser(
+        "migrate", help="Migrate config values to the latest schema"
+    )
     subparsers.add_parser("doctor", help="Inspect project health")
     init = subparsers.add_parser("init", help="Initialize a Zotomatic workspace")
     init.add_argument(
@@ -131,6 +134,7 @@ def _print_help() -> None:
     print("  config                Show effective configuration values (default)")
     print("  config show           Show effective configuration values")
     print("  config default        Reset config to defaults")
+    print("  config migrate        Migrate config values to the latest schema")
     print("  doctor                Inspect project health")
     print("  init                  Initialize a Zotomatic workspace")
     print("  llm                   Manage LLM settings")
@@ -213,6 +217,8 @@ def main(argv: Sequence[str] | None = None) -> None:
                 pipelines.run_config_show(cli_options)
             elif config_command == "default":
                 pipelines.run_config_default(cli_options)
+            elif config_command == "migrate":
+                pipelines.run_config_migrate(cli_options)
             else:  # pragma: no cover - argparse enforces choices
                 raise ZotomaticCLIError(f"Unknown config command: {config_command}")
             return

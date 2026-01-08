@@ -716,6 +716,23 @@ def run_config_default(cli_options: Mapping[str, Any] | None = None):
     return 0
 
 
+def run_config_migrate(cli_options: Mapping[str, Any] | None = None):
+    _ = cli_options
+    result = config.migrate_config()
+    if not result.updated_keys and not result.removed_keys:
+        print("Config: no migration needed")
+        return 0
+    print(f"Config: migrated {result.config_path}")
+    if result.backup_path:
+        print(f"Config: backup created at {result.backup_path}")
+    if result.updated_keys:
+        print(f"Config: updated {', '.join(result.updated_keys)}")
+    if result.removed_keys:
+        unique_removed = sorted(set(result.removed_keys))
+        print(f"Config: removed {', '.join(unique_removed)}")
+    return 0
+
+
 def run_template_create(cli_options: Mapping[str, Any] | None = None):
     logger = get_logger("zotomatic.template", False)
     cli_options = dict(cli_options or {})

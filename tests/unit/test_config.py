@@ -111,7 +111,71 @@ def test_reset_config_to_defaults_creates_backup(
     result = config.reset_config_to_defaults()
     assert result.config_path == cfg_path
     assert result.backup_path == cfg_path.with_name("config.toml.bak")
-    assert result.backup_path.exists()
+    backup_path = result.backup_path
+    assert backup_path is not None
+    assert backup_path.exists()
     assert "note_dir" in cfg_path.read_text(encoding="utf-8")
     assert result.template_path == template_target
     assert template_target.exists()
+
+
+def test_migrate_config_updates_llm_schema(tmp_path: Path) -> None:
+    cfg_path = tmp_path / "config.toml"
+    cfg_path.write_text(
+        "\n".join(
+            [
+                "note_dir = \"/notes\"",
+                "llm_openai_api_key = \"key\"",
+                "llm_openai_model = \"model-x\"",
+                "llm_openai_base_url = \"https://example.com\"",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    result = config.migrate_config(cfg_path)
+    assert result.updated_keys
+    assert result.removed_keys
+    backup_path = result.backup_path
+    assert backup_path is not None
+    assert backup_path.exists()
+    text = cfg_path.read_text(encoding="utf-8")
+    assert "llm_openai_api_key" not in text
+    assert "schema_version = 2" in text
+    assert "[llm]" in text
+    assert "provider = \"openai\"" in text
+    assert "[llm.providers.openai]" in text
+    assert "api_key = \"key\"" in text
+    assert "model = \"model-x\"" in text
+    assert "base_url = \"https://example.com\"" in text
+
+
+def test_migrate_config_no_changes(tmp_path: Path) -> None:
+    cfg_path = tmp_path / "config.toml"
+    cfg_path.write_text("note_dir = \"/notes\"\n", encoding="utf-8")
+    result = config.migrate_config(cfg_path)
+    assert "schema_version" in result.updated_keys
+    assert result.removed_keys == []
+    text = cfg_path.read_text(encoding="utf-8")
+    assert "schema_version" in text
+
+
+def test_migrate_config_tag_limit(tmp_path: Path) -> None:
+    cfg_path = tmp_path / "config.toml"
+    cfg_path.write_text(
+        "\n".join(
+            [
+                "note_dir = \"/notes\"",
+                "schema_version = 1",
+                "tag_generation_limit = 5",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    result = config.migrate_config(cfg_path)
+    assert "llm_tag_limit" in result.updated_keys
+    text = cfg_path.read_text(encoding="utf-8")
+    assert "tag_generation_limit" not in text
+    assert "llm_tag_limit = 5" in text

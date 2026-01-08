@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from zotomatic.errors import ZotomaticConfigError
+from zotomatic.llm.types import LLM_PROVIDER_DEFAULTS
 
 try:  # Python >=3.11
     import tomllib  # type: ignore[import-not-found]
@@ -39,6 +40,7 @@ def _default_template_path() -> str:
 _DEFAULT_CONFIG = _default_config_path()
 _DEFAULT_TEMPLATE_PATH = _default_template_path()
 
+_SCHEMA_VERSION = 2
 
 _DEFAULT_SETTINGS: dict[str, Any] = {
     "note_dir": _default_notes_dir(),
@@ -49,7 +51,7 @@ _DEFAULT_SETTINGS: dict[str, Any] = {
     "llm_summary_enabled": True,
     "llm_input_char_limit": 14000,
     "llm_daily_limit": 50,
-    "tag_generation_limit": 8,
+    "llm_tag_limit": 8,
     "zotero_api_key": "",
     "zotero_library_id": "",
     "zotero_library_scope": "user",
@@ -70,7 +72,7 @@ _USER_CONFIG_KEYS = {
     "llm_tag_enabled",
     "llm_summary_enabled",
     "llm_daily_limit",
-    "tag_generation_limit",
+    "llm_tag_limit",
     "zotero_api_key",
     "zotero_library_id",
     "zotero_library_scope",
@@ -110,6 +112,7 @@ def _build_default_config_template(settings: Mapping[str, Any]) -> str:
             "# Zotomatic configuration",
             "#",
             "# LLM settings are optional and can be configured later if needed.",
+            f"schema_version = {_render_value(_SCHEMA_VERSION)}",
             "",
             "# Paths & watcher",
             f"note_dir = {_render_value(settings['note_dir'])}",
@@ -130,9 +133,7 @@ def _build_default_config_template(settings: Mapping[str, Any]) -> str:
             f"llm_summary_mode = {_render_value(settings['llm_summary_mode'])}",
             f"llm_input_char_limit = {_render_value(settings['llm_input_char_limit'])}",
             f"llm_daily_limit = {_render_value(settings['llm_daily_limit'])}",
-            "",
-            "# Tagging",
-            f"tag_generation_limit = {_render_value(settings['tag_generation_limit'])}",
+            f"llm_tag_limit = {_render_value(settings['llm_tag_limit'])}",
             "",
         ]
     )
@@ -336,6 +337,14 @@ class ResetResult:
     template_created: bool
 
 
+@dataclass(slots=True)
+class MigrationResult:
+    config_path: Path
+    backup_path: Path | None
+    updated_keys: list[str]
+    removed_keys: list[str]
+
+
 def initialize_config(cli_options: Mapping[str, Any] | None = None) -> InitResult:
     config_path = _resolve_config_path(cli_options)
     config_path.parent.mkdir(parents=True, exist_ok=True)
@@ -437,4 +446,183 @@ def reset_config_to_defaults() -> ResetResult:
         backup_path=backup_path.resolve() if backup_path else None,
         template_path=template_path.resolve(),
         template_created=template_created,
+    )
+
+
+def migrate_config(config_path: Path | None = None) -> MigrationResult:
+    config_path = config_path or _DEFAULT_CONFIG
+    if not config_path.exists():
+        raise ZotomaticConfigError(
+            f"Config not found: {config_path}",
+            hint="Run `zotomatic init` first to create a config file.",
+        )
+    if tomllib is None:
+        raise ZotomaticConfigError(
+            "TOML parser is not available.",
+            hint="Use Python 3.11+ or install tomli for older versions.",
+        )
+
+    original_text = config_path.read_text(encoding="utf-8")
+    try:
+        data = tomllib.loads(original_text)  # type: ignore[union-attr]
+    except (OSError, ValueError) as exc:
+        raise ZotomaticConfigError(
+            "Failed to parse config file.",
+            hint="Fix the TOML syntax and retry.",
+        ) from exc
+
+    updated_keys: list[str] = []
+    removed_keys: list[str] = []
+    backup_path: Path | None = None
+
+    def _ensure_backup() -> None:
+        nonlocal backup_path
+        if backup_path is not None:
+            return
+        backup_path = config_path.with_name(config_path.name + ".bak")
+        if not backup_path.exists():
+            backup_path.write_text(original_text, encoding="utf-8")
+
+    def _parse_schema_version(config_data: Mapping[str, Any]) -> int:
+        raw_version = config_data.get("schema_version", 0)
+        try:
+            return int(raw_version)
+        except (TypeError, ValueError):
+            return 0
+
+    def _remove_top_level_keys(keys: set[str]) -> bool:
+        nonlocal removed_keys
+        text = config_path.read_text(encoding="utf-8")
+        legacy_pattern = re.compile(
+            rf"^\s*({'|'.join(re.escape(key) for key in keys)})\s*="
+        )
+        cleaned_lines: list[str] = []
+        removed = False
+        for line in text.splitlines():
+            if legacy_pattern.match(line):
+                removed = True
+                removed_keys.append(line.split("=", 1)[0].strip())
+                continue
+            cleaned_lines.append(line)
+        if removed:
+            _ensure_backup()
+            updated_text = "\n".join(cleaned_lines)
+            if text.endswith("\n"):
+                updated_text += "\n"
+            config_path.write_text(updated_text, encoding="utf-8")
+        return removed
+
+    def _migration_openai_legacy(config_data: Mapping[str, Any]) -> None:
+        legacy_keys = {
+            "llm_openai_api_key",
+            "llm_openai_model",
+            "llm_openai_base_url",
+        }
+        legacy_values = {
+            key: config_data.get(key) for key in legacy_keys if key in config_data
+        }
+        if not legacy_values:
+            return
+
+        llm_section = (
+            config_data.get("llm")
+            if isinstance(config_data.get("llm"), Mapping)
+            else {}
+        )
+        provider = str(llm_section.get("provider") or "").strip().lower()
+        if not provider:
+            provider = "openai"
+            if update_config_section_value(
+                config_path, "llm", "provider", provider
+            ):
+                updated_keys.append("llm.provider")
+
+        providers = (
+            llm_section.get("providers") if isinstance(llm_section, Mapping) else {}
+        )
+        provider_settings = (
+            providers.get(provider) if isinstance(providers, Mapping) else {}
+        )
+        if not isinstance(provider_settings, Mapping):
+            provider_settings = {}
+
+        defaults = LLM_PROVIDER_DEFAULTS.get("openai", {})
+        legacy_api_key = str(legacy_values.get("llm_openai_api_key") or "").strip()
+        legacy_model = str(legacy_values.get("llm_openai_model") or "").strip()
+        legacy_base_url = str(legacy_values.get("llm_openai_base_url") or "").strip()
+
+        api_key = str(provider_settings.get("api_key") or "").strip()
+        if not api_key and legacy_api_key:
+            if update_config_section_value(
+                config_path,
+                "llm.providers.openai",
+                "api_key",
+                legacy_api_key,
+            ):
+                updated_keys.append("llm.providers.openai.api_key")
+
+        model = str(provider_settings.get("model") or "").strip()
+        if not model:
+            model_value = legacy_model or defaults.get("model")
+            if model_value and update_config_section_value(
+                config_path,
+                "llm.providers.openai",
+                "model",
+                model_value,
+            ):
+                updated_keys.append("llm.providers.openai.model")
+
+        base_url = str(provider_settings.get("base_url") or "").strip()
+        if not base_url:
+            base_url_value = legacy_base_url or defaults.get("base_url")
+            if base_url_value and update_config_section_value(
+                config_path,
+                "llm.providers.openai",
+                "base_url",
+                base_url_value,
+            ):
+                updated_keys.append("llm.providers.openai.base_url")
+
+        _remove_top_level_keys(legacy_keys)
+
+    def _migration_tag_limit(config_data: Mapping[str, Any]) -> None:
+        legacy_key = "tag_generation_limit"
+        if legacy_key not in config_data:
+            return
+        legacy_value = config_data.get(legacy_key)
+        if "llm_tag_limit" not in config_data:
+            if update_config_value(config_path, "llm_tag_limit", legacy_value):
+                updated_keys.append("llm_tag_limit")
+        _remove_top_level_keys({legacy_key})
+
+    current_version = _parse_schema_version(data)
+    if current_version >= _SCHEMA_VERSION:
+        return MigrationResult(
+            config_path=config_path.resolve(),
+            backup_path=None,
+            updated_keys=updated_keys,
+            removed_keys=removed_keys,
+        )
+
+    _ensure_backup()
+
+    migrations = [
+        (0, 1, _migration_openai_legacy),
+        (1, 2, _migration_tag_limit),
+    ]
+
+    for from_version, to_version, handler in migrations:
+        if current_version != from_version:
+            continue
+        handler(data)
+        if update_config_value(config_path, "schema_version", to_version):
+            updated_keys.append("schema_version")
+        current_version = to_version
+        data = tomllib.loads(config_path.read_text(encoding="utf-8"))  # type: ignore[union-attr]
+
+    return MigrationResult(
+        config_path=config_path.resolve(),
+        backup_path=backup_path.resolve() if backup_path else None,
+        updated_keys=updated_keys,
+        removed_keys=removed_keys,
     )
