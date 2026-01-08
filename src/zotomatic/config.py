@@ -79,6 +79,21 @@ _USER_CONFIG_KEYS = {
     "note_title_pattern",
     "template_path",
 }
+_USER_CONFIG_KEY_ORDER = [
+    "note_dir",
+    "pdf_dir",
+    "zotero_api_key",
+    "zotero_library_id",
+    "zotero_library_scope",
+    "note_title_pattern",
+    "template_path",
+    "llm_summary_enabled",
+    "llm_tag_enabled",
+    "llm_summary_mode",
+    "llm_output_language",
+    "llm_daily_limit",
+    "llm_tag_limit",
+]
 _CONFIG_SHOW_EXCLUDE_SETTINGS = _INTERNAL_FIXED_SETTINGS | {"config_path"}
 
 
@@ -106,37 +121,79 @@ def user_config_keys() -> set[str]:
     return set(_USER_CONFIG_KEYS)
 
 
+def _render_canonical_config(
+    settings: Mapping[str, Any],
+    *,
+    include_llm_sections: bool = True,
+) -> str:
+    schema_version = settings.get("schema_version", _SCHEMA_VERSION)
+    lines: list[str] = [
+        "# schema_version is managed by zotomatic; do not remove.",
+        f"schema_version = {_render_value(schema_version)}",
+        "",
+        "# =======================",
+        "# Zotomatic Configuration",
+        "# =======================",
+        "",
+        "# Paths & watcher",
+        f"note_dir = {_render_value(settings.get('note_dir', _DEFAULT_SETTINGS['note_dir']))}",
+        f"pdf_dir = {_render_value(settings.get('pdf_dir', ''))}",
+        "",
+        "# Zotero",
+        f"zotero_api_key = {_render_value(settings.get('zotero_api_key', ''))}",
+        f"zotero_library_id = {_render_value(settings.get('zotero_library_id', ''))}",
+        f"zotero_library_scope = {_render_value(settings.get('zotero_library_scope', 'user'))}",
+        "",
+        "# Obsidian notes",
+        f"note_title_pattern = {_render_value(settings.get('note_title_pattern', _DEFAULT_SETTINGS['note_title_pattern']))}",
+        f"template_path = {_render_value(settings.get('template_path', _DEFAULT_SETTINGS['template_path']))}",
+        "",
+        "# AI integration",
+        f"llm_summary_enabled = {_render_value(settings.get('llm_summary_enabled', _DEFAULT_SETTINGS['llm_summary_enabled']))}",
+        f"llm_tag_enabled = {_render_value(settings.get('llm_tag_enabled', _DEFAULT_SETTINGS['llm_tag_enabled']))}",
+        f"llm_summary_mode = {_render_value(settings.get('llm_summary_mode', _DEFAULT_SETTINGS['llm_summary_mode']))}",
+        f"llm_output_language = {_render_value(settings.get('llm_output_language', _DEFAULT_SETTINGS['llm_output_language']))}",
+        f"llm_daily_limit = {_render_value(settings.get('llm_daily_limit', _DEFAULT_SETTINGS['llm_daily_limit']))}",
+        f"llm_tag_limit = {_render_value(settings.get('llm_tag_limit', _DEFAULT_SETTINGS['llm_tag_limit']))}",
+    ]
+
+    if include_llm_sections:
+        llm_section = settings.get("llm")
+        if isinstance(llm_section, Mapping):
+            provider = str(llm_section.get("provider") or "").strip()
+            providers = llm_section.get("providers")
+            if provider:
+                lines.extend(
+                    [
+                        "",
+                        "[llm]",
+                        f"provider = {_render_value(provider)}",
+                    ]
+                )
+            if isinstance(providers, Mapping):
+                provider_names = sorted(providers.keys())
+                if provider and provider in provider_names:
+                    provider_names.remove(provider)
+                    provider_names.insert(0, provider)
+                for name in provider_names:
+                    values = providers.get(name)
+                    if not isinstance(values, Mapping):
+                        continue
+                    section_lines = [f"[llm.providers.{name}]"]
+                    for key in ("api_key", "model", "base_url"):
+                        if key in values and values[key] is not None:
+                            section_lines.append(
+                                f"{key} = {_render_value(values[key])}"
+                            )
+                    if len(section_lines) > 1:
+                        lines.append("")
+                        lines.extend(section_lines)
+
+    return "\n".join(lines).rstrip("\n") + "\n"
+
+
 def _build_default_config_template(settings: Mapping[str, Any]) -> str:
-    return "\n".join(
-        [
-            "# Zotomatic configuration",
-            "#",
-            "# LLM settings are optional and can be configured later if needed.",
-            f"schema_version = {_render_value(_SCHEMA_VERSION)}",
-            "",
-            "# Paths & watcher",
-            f"note_dir = {_render_value(settings['note_dir'])}",
-            'pdf_dir = ""',
-            "",
-            "# Zotero",
-            f"zotero_api_key = {_render_value(settings['zotero_api_key'])}",
-            f"zotero_library_id = {_render_value(settings['zotero_library_id'])}",
-            f"zotero_library_scope = {_render_value(settings['zotero_library_scope'])}",
-            "",
-            "# Obsidian notes",
-            f"note_title_pattern = {_render_value(settings['note_title_pattern'])}",
-            f"template_path = {_render_value(settings['template_path'])}",
-            "",
-            "# AI integration",
-            f"llm_summary_enabled = {_render_value(settings['llm_summary_enabled'])}",
-            f"llm_tag_enabled = {_render_value(settings['llm_tag_enabled'])}",
-            f"llm_summary_mode = {_render_value(settings['llm_summary_mode'])}",
-            f"llm_input_char_limit = {_render_value(settings['llm_input_char_limit'])}",
-            f"llm_daily_limit = {_render_value(settings['llm_daily_limit'])}",
-            f"llm_tag_limit = {_render_value(settings['llm_tag_limit'])}",
-            "",
-        ]
-    )
+    return _render_canonical_config(settings, include_llm_sections=False)
 
 
 def _coerce_env_value(key: str, value: str) -> Any:
@@ -182,7 +239,23 @@ def update_config_value(config_path: Path, key: str, value: Any) -> bool:
             config_path.write_text(updated, encoding="utf-8")
             return True
 
-    updated = text.rstrip("\n") + "\n" + rendered + "\n"
+    section_header = re.compile(r"^\s*\[.+\]\s*$")
+    insert_at = None
+    for idx, line in enumerate(lines):
+        if section_header.match(line):
+            insert_at = idx
+            break
+    if insert_at is None:
+        updated = text.rstrip("\n") + "\n" + rendered + "\n"
+        config_path.write_text(updated, encoding="utf-8")
+        return True
+    if insert_at > 0 and lines[insert_at - 1].strip():
+        lines.insert(insert_at, "")
+        insert_at += 1
+    lines.insert(insert_at, rendered)
+    updated = "\n".join(lines)
+    if text.endswith("\n"):
+        updated += "\n"
     config_path.write_text(updated, encoding="utf-8")
     return True
 
@@ -414,17 +487,37 @@ def initialize_config(cli_options: Mapping[str, Any] | None = None) -> InitResul
         config_created = True
     else:
         existing_content = config_path.read_text(encoding="utf-8")
+        ordered_keys = [key for key in _USER_CONFIG_KEY_ORDER if key in _DEFAULT_SETTINGS]
         missing_keys = [
-            key for key in _DEFAULT_SETTINGS if f"{key} =" not in existing_content
+            key for key in ordered_keys if f"{key} =" not in existing_content
         ]
+        if "schema_version" not in existing_content:
+            missing_keys.insert(0, "schema_version")
         if missing_keys:
             config_updated_keys = list(missing_keys)
-            with config_path.open("a", encoding="utf-8") as handle:
-                handle.write(
-                    "\n# Added by zotomatic init to ensure required defaults.\n"
-                )
-                for key in missing_keys:
-                    handle.write(f"{key} = {_render_value(init_settings[key])}\n")
+            section_header = re.compile(r"^\s*\[.+\]\s*$")
+            lines = existing_content.splitlines()
+            insert_at = None
+            for idx, line in enumerate(lines):
+                if section_header.match(line):
+                    insert_at = idx
+                    break
+            block = ["", "# Added by zotomatic init to ensure required defaults."]
+            for key in missing_keys:
+                if key == "schema_version":
+                    value = _SCHEMA_VERSION
+                else:
+                    value = init_settings[key]
+                block.append(f"{key} = {_render_value(value)}")
+            block.append("")
+            if insert_at is None:
+                lines.extend(block)
+            else:
+                lines[insert_at:insert_at] = block
+            updated = "\n".join(lines)
+            if existing_content.endswith("\n"):
+                updated += "\n"
+            config_path.write_text(updated, encoding="utf-8")
 
     template_path_value = init_settings["template_path"]
     try:
@@ -539,6 +632,156 @@ def migrate_config(config_path: Path | None = None) -> MigrationResult:
         except (TypeError, ValueError):
             return 0
 
+    def _normalize_top_level_keys(config_data: Mapping[str, Any]) -> None:
+        keys = list(_USER_CONFIG_KEY_ORDER)
+        text = config_path.read_text(encoding="utf-8")
+        lines = text.splitlines()
+        section_header = re.compile(r"^\s*\[.+\]\s*$")
+        key_pattern = re.compile(
+            rf"^\s*({'|'.join(re.escape(key) for key in keys)})\s*="
+        )
+
+        removed_comments = {
+            "# Tagging",
+            "# Update llm_openai_api_key (or export ZOTOMATIC_LLM_OPENAI_API_KEY) before running `zotomatic scan`.",
+            "# schema_version is managed by zotomatic; do not remove.",
+            "# Added by zotomatic init to ensure required defaults.",
+            "# Zotomatic configuration",
+            "# Zotomatic Configuration",
+            "# =======================",
+            "#",
+        }
+        internal_pattern = re.compile(
+            rf"^\s*({'|'.join(re.escape(key) for key in _INTERNAL_FIXED_SETTINGS)})\s*="
+        )
+
+        schema_value: str | None = None
+        kept_lines: list[str] = []
+        first_section_index = None
+        in_section = False
+        removed_in_section: set[str] = set()
+        removed_values: dict[str, str] = {}
+
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith("schema_version"):
+                _, value = line.split("=", 1)
+                schema_value = value.strip()
+                _ensure_backup()
+                continue
+            if stripped in removed_comments:
+                _ensure_backup()
+                continue
+            if internal_pattern.match(line):
+                _ensure_backup()
+                removed_keys.append(line.split("=", 1)[0].strip())
+                continue
+            if section_header.match(line):
+                if first_section_index is None:
+                    first_section_index = len(kept_lines)
+                in_section = True
+                kept_lines.append(line)
+                continue
+            if in_section and key_pattern.match(line):
+                key, value = line.split("=", 1)
+                key = key.strip()
+                removed_in_section.add(key)
+                removed_values[key] = value.strip()
+                _ensure_backup()
+                continue
+            kept_lines.append(line)
+
+        if schema_value is None:
+            schema_value = _render_value(_SCHEMA_VERSION)
+        else:
+            schema_value = schema_value
+
+        present_top_level: set[str] = set()
+        for line in kept_lines[: first_section_index or len(kept_lines)]:
+            if key_pattern.match(line):
+                present_top_level.add(line.split("=", 1)[0].strip())
+
+        insert_lines: list[str] = []
+        for key in keys:
+            if key not in removed_in_section:
+                continue
+            if key in present_top_level:
+                continue
+            if key in removed_values:
+                insert_lines.append(f"{key} = {removed_values[key]}")
+                continue
+            if key not in config_data:
+                continue
+            insert_lines.append(f"{key} = {_render_value(config_data[key])}")
+
+        header_lines = [
+            "# schema_version is managed by zotomatic; do not remove.",
+            f"schema_version = {schema_value}",
+            "# =======================",
+            "# Zotomatic Configuration",
+            "# =======================",
+        ]
+        if header_lines:
+            kept_lines = header_lines + kept_lines
+            if first_section_index is not None:
+                first_section_index += len(header_lines)
+
+        if insert_lines:
+            if first_section_index is None:
+                kept_lines.extend(insert_lines)
+            else:
+                kept_lines[first_section_index:first_section_index] = insert_lines
+                header_index = first_section_index + len(insert_lines)
+                if header_index > 0 and kept_lines[header_index - 1].strip():
+                    kept_lines.insert(header_index, "")
+
+        # Normalize top-level spacing: blank line only before comment headers.
+        if first_section_index is None:
+            first_section_index = len(kept_lines)
+        top_lines = kept_lines[:first_section_index]
+        section_lines = kept_lines[first_section_index:]
+        top_lines = [line for line in top_lines if line.strip()]
+        normalized_top: list[str] = []
+        for line in top_lines:
+            if line.lstrip().startswith("#") and normalized_top:
+                prev = normalized_top[-1].strip()
+                if not normalized_top[-1].lstrip().startswith("#"):
+                    normalized_top.append("")
+                elif prev.startswith("schema_version"):
+                    normalized_top.append("")
+                elif prev.startswith("# ======================="):
+                    normalized_top.append("")
+            normalized_top.append(line)
+        # Ensure exactly one blank line before the first section.
+        while section_lines and not section_lines[0].strip():
+            section_lines.pop(0)
+        if section_lines:
+            normalized_top.append("")
+        kept_lines = normalized_top + section_lines
+
+        # Ensure a single blank line before each section header.
+        normalized: list[str] = []
+        blank_count = 0
+        for line in kept_lines:
+            if not line.strip():
+                blank_count += 1
+                if blank_count > 1:
+                    continue
+                normalized.append(line)
+                continue
+            if section_header.match(line) and normalized:
+                if normalized[-1].strip():
+                    normalized.append("")
+                blank_count = 0
+                normalized.append(line)
+                continue
+            blank_count = 0
+            normalized.append(line)
+        kept_lines = normalized
+
+        updated_text = "\n".join(kept_lines).rstrip("\n") + "\n"
+        config_path.write_text(updated_text, encoding="utf-8")
+
     def _remove_top_level_keys(keys: set[str]) -> bool:
         nonlocal removed_keys
         text = config_path.read_text(encoding="utf-8")
@@ -646,9 +889,13 @@ def migrate_config(config_path: Path | None = None) -> MigrationResult:
 
     current_version = _parse_schema_version(data)
     if current_version >= _SCHEMA_VERSION:
+        rendered = _render_canonical_config(data, include_llm_sections=True)
+        if rendered != original_text:
+            _ensure_backup()
+            config_path.write_text(rendered, encoding="utf-8")
         return MigrationResult(
             config_path=config_path.resolve(),
-            backup_path=None,
+            backup_path=backup_path.resolve() if backup_path else None,
             updated_keys=updated_keys,
             removed_keys=removed_keys,
         )
@@ -668,6 +915,12 @@ def migrate_config(config_path: Path | None = None) -> MigrationResult:
             updated_keys.append("schema_version")
         current_version = to_version
         data = tomllib.loads(config_path.read_text(encoding="utf-8"))  # type: ignore[union-attr]
+
+    rendered = _render_canonical_config(data, include_llm_sections=True)
+    current_text = config_path.read_text(encoding="utf-8")
+    if rendered != current_text:
+        _ensure_backup()
+        config_path.write_text(rendered, encoding="utf-8")
 
     return MigrationResult(
         config_path=config_path.resolve(),

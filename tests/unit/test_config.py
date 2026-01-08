@@ -192,3 +192,28 @@ def test_build_llm_section_from_env() -> None:
     providers = section["providers"]
     assert providers["gemini"]["api_key"] == "key"
     assert providers["gemini"]["model"] == "model"
+
+
+def test_migrate_config_moves_top_level_keys(tmp_path: Path) -> None:
+    cfg_path = tmp_path / "config.toml"
+    cfg_path.write_text(
+        "\n".join(
+            [
+                "[llm.providers.openai]",
+                "api_key = \"key\"",
+                "schema_version = 2",
+                "llm_tag_limit = 8",
+                "pdf_alias_prefix = \"zotero:/storage\"",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    result = config.migrate_config(cfg_path)
+    assert result.backup_path is not None
+    text = cfg_path.read_text(encoding="utf-8")
+    assert text.lstrip().startswith("# schema_version is managed by zotomatic")
+    assert "# schema_version is managed by zotomatic" in text
+    assert "schema_version = 2" in text
+    assert "llm_tag_limit = 8\n\n[llm.providers.openai]" in text
