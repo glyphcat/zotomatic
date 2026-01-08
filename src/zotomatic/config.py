@@ -273,6 +273,31 @@ def _load_env_config() -> dict[str, Any]:
     return config
 
 
+def _build_llm_section_from_env(env_config: Mapping[str, Any]) -> dict[str, Any]:
+    provider = env_config.get("llm_provider")
+    if not provider:
+        return {}
+    provider_name = str(provider).strip().lower()
+    if provider_name == "chatgpt":
+        provider_name = "openai"
+    if provider_name not in LLM_PROVIDER_DEFAULTS:
+        return {}
+
+    providers: dict[str, Any] = {}
+    settings: dict[str, Any] = {}
+    api_key_key = f"llm_{provider_name}_api_key"
+    model_key = f"llm_{provider_name}_model"
+    base_url_key = f"llm_{provider_name}_base_url"
+    if api_key := env_config.get(api_key_key):
+        settings["api_key"] = api_key
+    if model := env_config.get(model_key):
+        settings["model"] = model
+    if base_url := env_config.get(base_url_key):
+        settings["base_url"] = base_url
+    providers[provider_name] = settings
+    return {"provider": provider_name, "providers": providers}
+
+
 def get_config_with_sources(
     cli_options: Mapping[str, Any] | None = None,
 ) -> dict[str, tuple[Any, str]]:
@@ -295,6 +320,30 @@ def get_config_with_sources(
     for key, value in env_config.items():
         merged[key] = value
         sources[key] = "env"
+    llm_env_section = _build_llm_section_from_env(env_config)
+    if llm_env_section:
+        if isinstance(merged.get("llm"), Mapping):
+            merged_llm = dict(merged["llm"])
+            if "provider" in llm_env_section:
+                merged_llm["provider"] = llm_env_section["provider"]
+            providers = merged_llm.get("providers")
+            if not isinstance(providers, Mapping):
+                providers = {}
+            else:
+                providers = dict(providers)
+            env_providers = llm_env_section.get("providers", {})
+            if isinstance(env_providers, Mapping):
+                for provider, env_settings in env_providers.items():
+                    if not isinstance(env_settings, Mapping):
+                        continue
+                    settings = dict(providers.get(provider, {}))
+                    settings.update(env_settings)
+                    providers[provider] = settings
+            merged_llm["providers"] = providers
+            merged["llm"] = merged_llm
+        else:
+            merged["llm"] = llm_env_section
+        sources["llm"] = "env"
     for key, value in cli_config.items():
         merged[key] = value
         sources[key] = "cli"

@@ -831,6 +831,11 @@ def run_llm_set(cli_options: Mapping[str, Any] | None = None):
             api_key,
         ):
             updates.append(f"llm.providers.{provider}.api_key")
+    else:
+        print(
+            "Config: api_key was not provided; set an env var "
+            f"ZOTOMATIC_LLM_{provider.upper()}_API_KEY to use the LLM."
+        )
     if model:
         if config.update_config_section_value(
             config_path,

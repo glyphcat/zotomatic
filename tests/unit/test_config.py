@@ -179,3 +179,16 @@ def test_migrate_config_tag_limit(tmp_path: Path) -> None:
     text = cfg_path.read_text(encoding="utf-8")
     assert "tag_generation_limit" not in text
     assert "llm_tag_limit = 5" in text
+
+
+def test_build_llm_section_from_env() -> None:
+    env = {
+        "llm_provider": "gemini",
+        "llm_gemini_api_key": "key",
+        "llm_gemini_model": "model",
+    }
+    section = config._build_llm_section_from_env(env)
+    assert section["provider"] == "gemini"
+    providers = section["providers"]
+    assert providers["gemini"]["api_key"] == "key"
+    assert providers["gemini"]["model"] == "model"
