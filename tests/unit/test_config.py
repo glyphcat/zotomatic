@@ -181,6 +181,15 @@ def test_migrate_config_tag_limit(tmp_path: Path) -> None:
     assert "llm_tag_limit = 5" in text
 
 
+def test_get_schema_version(tmp_path: Path) -> None:
+    cfg_path = tmp_path / "config.toml"
+    cfg_path.write_text("schema_version = 2\n", encoding="utf-8")
+    assert config.get_schema_version(cfg_path) == 2
+
+    cfg_path.write_text("note_dir = \"/notes\"\n", encoding="utf-8")
+    assert config.get_schema_version(cfg_path) == 0
+
+
 def test_build_llm_section_from_env() -> None:
     env = {
         "llm_provider": "gemini",
@@ -210,8 +219,9 @@ def test_migrate_config_moves_top_level_keys(tmp_path: Path) -> None:
         encoding="utf-8",
     )
 
-    result = config.migrate_config(cfg_path)
-    assert result.backup_path is not None
+    _ = config.migrate_config(cfg_path)
+    normalized = config.normalize_config(cfg_path)
+    assert normalized.backup_path is not None
     text = cfg_path.read_text(encoding="utf-8")
     assert text.lstrip().startswith("# schema_version is managed by zotomatic")
     assert "# schema_version is managed by zotomatic" in text

@@ -451,7 +451,7 @@ def run_init(cli_options: Mapping[str, Any] | None = None):
                 "base_url",
                 base_url,
             )
-        config.migrate_config(init_result.config_path)
+        config.normalize_config(init_result.config_path)
         if updated:
             print(f"Config updated: llm.provider={provider}")
         else:
@@ -736,11 +736,14 @@ def run_config_default(cli_options: Mapping[str, Any] | None = None):
 
 def run_config_migrate(cli_options: Mapping[str, Any] | None = None):
     _ = cli_options
-    result = config.migrate_config()
-    if not result.updated_keys and not result.removed_keys:
+    current_version = config.get_schema_version()
+    if current_version >= config.current_schema_version():
         print("Config migration not needed")
         return 0
-    print(f"Config migrated: {result.config_path}")
+    result = config.migrate_config()
+    normalized = config.normalize_config(result.config_path)
+    if result.updated_keys or result.removed_keys:
+        print(f"Config migrated: {result.config_path}")
     if result.backup_path:
         print(f"Config backup created: {result.backup_path}")
     if result.updated_keys:
@@ -748,6 +751,10 @@ def run_config_migrate(cli_options: Mapping[str, Any] | None = None):
     if result.removed_keys:
         unique_removed = sorted(set(result.removed_keys))
         print(f"Removed keys: {', '.join(unique_removed)}")
+    if normalized.normalized and not (result.updated_keys or result.removed_keys):
+        print(f"Config normalized: {normalized.config_path}")
+        if normalized.backup_path:
+            print(f"Config backup created: {normalized.backup_path}")
     return 0
 
 
@@ -885,4 +892,4 @@ def run_llm_set(cli_options: Mapping[str, Any] | None = None):
         print(f"LLM settings updated: {', '.join(updates)}")
     else:
         print("LLM settings already up to date")
-    config.migrate_config(config_path)
+    config.normalize_config(config_path)

@@ -121,6 +121,36 @@ def user_config_keys() -> set[str]:
     return set(_USER_CONFIG_KEYS)
 
 
+def current_schema_version() -> int:
+    return _SCHEMA_VERSION
+
+
+def get_schema_version(config_path: Path | None = None) -> int:
+    config_path = config_path or _DEFAULT_CONFIG
+    if not config_path.exists():
+        raise ZotomaticConfigError(
+            f"Config not found: {config_path}",
+            hint="Run `zotomatic init` first to create a config file.",
+        )
+    if tomllib is None:
+        raise ZotomaticConfigError(
+            "TOML parser is not available.",
+            hint="Use Python 3.11+ or install tomli for older versions.",
+        )
+    try:
+        data = tomllib.loads(config_path.read_text(encoding="utf-8"))  # type: ignore[union-attr]
+    except (OSError, ValueError) as exc:
+        raise ZotomaticConfigError(
+            "Failed to parse config file.",
+            hint="Fix the TOML syntax and retry.",
+        ) from exc
+    raw_version = data.get("schema_version", 0)
+    try:
+        return int(raw_version)
+    except (TypeError, ValueError):
+        return 0
+
+
 def _render_canonical_config(
     settings: Mapping[str, Any],
     *,
@@ -465,6 +495,13 @@ class MigrationResult:
     backup_path: Path | None
     updated_keys: list[str]
     removed_keys: list[str]
+
+
+@dataclass(slots=True)
+class NormalizeResult:
+    config_path: Path
+    backup_path: Path | None
+    normalized: bool
 
 
 def initialize_config(cli_options: Mapping[str, Any] | None = None) -> InitResult:
@@ -883,10 +920,6 @@ def migrate_config(config_path: Path | None = None) -> MigrationResult:
 
     current_version = _parse_schema_version(data)
     if current_version >= _SCHEMA_VERSION:
-        rendered = _render_canonical_config(data, include_llm_sections=True)
-        if rendered != original_text:
-            _ensure_backup()
-            config_path.write_text(rendered, encoding="utf-8")
         return MigrationResult(
             config_path=config_path.resolve(),
             backup_path=backup_path.resolve() if backup_path else None,
@@ -910,15 +943,50 @@ def migrate_config(config_path: Path | None = None) -> MigrationResult:
         current_version = to_version
         data = tomllib.loads(config_path.read_text(encoding="utf-8"))  # type: ignore[union-attr]
 
-    rendered = _render_canonical_config(data, include_llm_sections=True)
-    current_text = config_path.read_text(encoding="utf-8")
-    if rendered != current_text:
-        _ensure_backup()
-        config_path.write_text(rendered, encoding="utf-8")
-
     return MigrationResult(
         config_path=config_path.resolve(),
         backup_path=backup_path.resolve() if backup_path else None,
         updated_keys=updated_keys,
         removed_keys=removed_keys,
+    )
+
+
+def normalize_config(config_path: Path | None = None) -> NormalizeResult:
+    config_path = config_path or _DEFAULT_CONFIG
+    if not config_path.exists():
+        raise ZotomaticConfigError(
+            f"Config not found: {config_path}",
+            hint="Run `zotomatic init` first to create a config file.",
+        )
+    if tomllib is None:
+        raise ZotomaticConfigError(
+            "TOML parser is not available.",
+            hint="Use Python 3.11+ or install tomli for older versions.",
+        )
+
+    original_text = config_path.read_text(encoding="utf-8")
+    try:
+        data = tomllib.loads(original_text)  # type: ignore[union-attr]
+    except (OSError, ValueError) as exc:
+        raise ZotomaticConfigError(
+            "Failed to parse config file.",
+            hint="Fix the TOML syntax and retry.",
+        ) from exc
+
+    rendered = _render_canonical_config(data, include_llm_sections=True)
+    if rendered == original_text:
+        return NormalizeResult(
+            config_path=config_path.resolve(),
+            backup_path=None,
+            normalized=False,
+        )
+
+    backup_path = config_path.with_name(config_path.name + ".bak")
+    if not backup_path.exists():
+        backup_path.write_text(original_text, encoding="utf-8")
+    config_path.write_text(rendered, encoding="utf-8")
+    return NormalizeResult(
+        config_path=config_path.resolve(),
+        backup_path=backup_path.resolve(),
+        normalized=True,
     )
