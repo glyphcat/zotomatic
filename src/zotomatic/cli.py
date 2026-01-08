@@ -86,11 +86,13 @@ def _build_parser() -> argparse.ArgumentParser:
         "--provider",
         dest="llm_provider",
         choices=["openai", "gemini", "chatgpt"],
+        required=True,
         help="LLM provider (openai, gemini, chatgpt)",
     )
     llm_set.add_argument(
         "--api-key",
         dest="llm_api_key",
+        required=True,
         help="LLM API key",
     )
     llm_set.add_argument(
@@ -158,8 +160,8 @@ def _print_help() -> None:
     print("    --template-path PATH  Override default template path")
     print("    --llm-provider      Optional LLM provider (openai, gemini, chatgpt)")
     print("  llm set:")
-    print("    --provider          LLM provider (openai, gemini, chatgpt)")
-    print("    --api-key           LLM API key")
+    print("    --provider          (required) LLM provider (openai, gemini, chatgpt)")
+    print("    --api-key           (required) LLM API key")
     print("    --model             LLM model name")
     print("    --base-url          LLM base URL")
     print("  template create/set:")
