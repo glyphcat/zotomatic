@@ -138,10 +138,12 @@ def test_run_init_with_llm_provider(
     )
 
     captured = capsys.readouterr()
-    assert "Config: updated llm.provider=openai" in captured.out
+    assert "Config updated: llm.provider=openai" in captured.out
     text = config_path.read_text(encoding="utf-8")
     assert "[llm]" in text
     assert "provider = \"openai\"" in text
+    assert "[llm.providers.openai]" in text
+    assert "model = \"gpt-4o-mini\"" in text
 
 
 def test_run_llm_set(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:

@@ -495,29 +495,23 @@ def initialize_config(cli_options: Mapping[str, Any] | None = None) -> InitResul
             missing_keys.insert(0, "schema_version")
         if missing_keys:
             config_updated_keys = list(missing_keys)
-            section_header = re.compile(r"^\s*\[.+\]\s*$")
-            lines = existing_content.splitlines()
-            insert_at = None
-            for idx, line in enumerate(lines):
-                if section_header.match(line):
-                    insert_at = idx
-                    break
-            block = ["", "# Added by zotomatic init to ensure required defaults."]
-            for key in missing_keys:
-                if key == "schema_version":
-                    value = _SCHEMA_VERSION
-                else:
-                    value = init_settings[key]
-                block.append(f"{key} = {_render_value(value)}")
-            block.append("")
-            if insert_at is None:
-                lines.extend(block)
-            else:
-                lines[insert_at:insert_at] = block
-            updated = "\n".join(lines)
-            if existing_content.endswith("\n"):
-                updated += "\n"
-            config_path.write_text(updated, encoding="utf-8")
+            file_config = _load_file_config(config_path)
+            merged_settings: dict[str, Any] = dict(_DEFAULT_SETTINGS)
+            merged_settings.update(file_config)
+            for key, value in cli_options.items():
+                if value is None or key == "config_path":
+                    continue
+                if key in merged_settings or key == "pdf_dir":
+                    merged_settings[key] = value
+            merged_settings["schema_version"] = file_config.get(
+                "schema_version", _SCHEMA_VERSION
+            )
+            config_path.write_text(
+                _render_canonical_config(
+                    merged_settings, include_llm_sections=True
+                ),
+                encoding="utf-8",
+            )
 
     template_path_value = init_settings["template_path"]
     try:

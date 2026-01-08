@@ -434,10 +434,28 @@ def run_init(cli_options: Mapping[str, Any] | None = None):
         updated = config.update_config_section_value(
             init_result.config_path, "llm", "provider", provider
         )
+        defaults = LLM_PROVIDER_DEFAULTS.get(provider, {})
+        model = defaults.get("model")
+        base_url = defaults.get("base_url")
+        if model:
+            config.update_config_section_value(
+                init_result.config_path,
+                f"llm.providers.{provider}",
+                "model",
+                model,
+            )
+        if base_url:
+            config.update_config_section_value(
+                init_result.config_path,
+                f"llm.providers.{provider}",
+                "base_url",
+                base_url,
+            )
+        config.migrate_config(init_result.config_path)
         if updated:
-            print(f"Config: updated llm.provider={provider}")
+            print(f"Config updated: llm.provider={provider}")
         else:
-            print(f"Config: exists llm.provider={provider}")
+            print(f"Config exists: llm.provider={provider}")
 
     db_config = WatcherStateRepositoryConfig.from_settings(settings)
     db_path = db_config.sqlite_path.expanduser()
