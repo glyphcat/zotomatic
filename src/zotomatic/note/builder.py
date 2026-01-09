@@ -1,5 +1,4 @@
 import re
-import unicodedata
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -10,7 +9,7 @@ from zotomatic.errors import (
 from zotomatic.note.types import Note, NoteBuilderConfig, NoteBuilderContext
 from zotomatic.repositories import NoteRepository
 from zotomatic.utils import slug
-from zotomatic.utils.note import ensure_frontmatter_keys
+from zotomatic.utils.note import ensure_frontmatter_keys, normalize_path_value
 
 _FILENAME_TOKEN = re.compile(r"\{\{\s*(\w+)\s*\}\}")
 
@@ -115,6 +114,7 @@ class NoteBuilder:
 
         title = context.title or "(untitled)"
         citekey = context.citekey or ""
+        pdf_path = normalize_path_value(context.pdf_path or "")
 
         prepared: dict[str, Any] = {
             "title": title,
@@ -126,7 +126,7 @@ class NoteBuilder:
             "url": context.url or "",
             "source_url": context.source_url or "",
             "zotero_select_uri": context.zotero_select_uri or "",
-            "pdf_path": context.pdf_path or "",
+            "pdf_path": pdf_path,
             "tags": tags_str,
             "tags_list": tags_list,
             "abstract": context.abstract or "",
@@ -153,9 +153,12 @@ class NoteBuilder:
     ) -> str:
         tags_value = prepared_context.get("tags", "")
         tags = f"[{tags_value}]" if tags_value else "[]"
+        pdf_local = normalize_path_value(
+            prepared_context.get("pdf_path", "") or ""
+        )
         required = {
             "citekey": prepared_context.get("citekey", "") or "",
-            "pdf_local": prepared_context.get("pdf_path", "") or "",
+            "pdf_local": pdf_local,
             "zotomatic_summary_status": prepared_context.get(
                 "zotomatic_summary_status", "pending"
             )

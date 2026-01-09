@@ -78,3 +78,9 @@ Body
 """
     updated = note.ensure_frontmatter_keys(text, {"citekey": "X"})
     assert updated == text
+
+
+def test_normalize_path_value() -> None:
+    decomposed = "マイドライブ"
+    normalized = note.normalize_path_value(decomposed)
+    assert normalized == "マイドライブ"

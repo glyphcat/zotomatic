@@ -18,6 +18,7 @@ from zotomatic.repositories import NoteRepository
 from zotomatic.services import LLMUsageService
 from zotomatic.utils.note import (
     extract_summary_block,
+    normalize_path_value,
     parse_frontmatter,
     parse_tags,
     update_frontmatter_value,
@@ -107,7 +108,7 @@ class NoteWorkflow:
             text = existing.read_text(encoding=self._note_repository.config.encoding)
         except OSError:
             return False
-        pdf_path = context.builder_context.pdf_path
+        pdf_path = normalize_path_value(context.builder_context.pdf_path)
         if not pdf_path:
             return False
         updated, changed = update_frontmatter_value(
