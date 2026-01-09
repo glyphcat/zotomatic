@@ -9,7 +9,7 @@ from typing import Any, Mapping
 import httpx
 
 from zotomatic import i18n
-from zotomatic.errors import ZotomaticLLMClientError
+from zotomatic.errors import ZotomaticLLMAPIError, ZotomaticLLMClientError
 from zotomatic.llm import prompts
 from zotomatic.logging import get_logger
 from zotomatic.utils import pdf
@@ -29,6 +29,11 @@ class BaseLLMClient(ABC):
     # チャンキング設定(定数)
     _DEEP_CHUNK_SENTENCE_RANGE = (3, 5)
     _DEEP_REDUCE_SENTENCE_RANGE = (6, 8)
+    _SUMMARY_QUICK_MAX_TOKENS = 600
+    _SUMMARY_STANDARD_MAX_TOKENS = 900
+    _SUMMARY_DEEP_CHUNK_MAX_TOKENS = 400
+    _SUMMARY_DEEP_REDUCE_MAX_TOKENS = 900
+    _TAGS_MAX_TOKENS = 400
 
     def __init__(self, config: LLMClientConfig):
         self._config = config
@@ -80,7 +85,7 @@ class BaseLLMClient(ABC):
         summary, response = self._chat_completion(
             messages,
             temperature=self._config.temperature,
-            max_tokens=320,
+            max_tokens=self._SUMMARY_QUICK_MAX_TOKENS,
         )
         return summary, response
 
@@ -120,7 +125,7 @@ class BaseLLMClient(ABC):
         summary, response = self._chat_completion(
             messages,
             temperature=self._config.temperature,
-            max_tokens=400,
+            max_tokens=self._SUMMARY_STANDARD_MAX_TOKENS,
         )
         return summary, {"mode": "standard", "response": response}
 
@@ -158,7 +163,7 @@ class BaseLLMClient(ABC):
             summary, response = self._chat_completion(
                 messages,
                 temperature=self._config.temperature,
-                max_tokens=280,
+                max_tokens=self._SUMMARY_DEEP_CHUNK_MAX_TOKENS,
             )
             chunk_summaries.append(summary)
             chunk_responses.append(response)
@@ -188,7 +193,7 @@ class BaseLLMClient(ABC):
         summary, reduce_response = self._chat_completion(
             messages,
             temperature=self._config.temperature,
-            max_tokens=480,
+            max_tokens=self._SUMMARY_DEEP_REDUCE_MAX_TOKENS,
         )
 
         return summary, {
@@ -289,7 +294,7 @@ class BaseLLMClient(ABC):
         result, raw_response = self._chat_completion(
             messages,
             temperature=self._config.temperature,
-            max_tokens=320,
+            max_tokens=self._TAGS_MAX_TOKENS,
         )
         tags: list[str] = []
         if result:
@@ -308,11 +313,8 @@ class BaseLLMClient(ABC):
 
 
 # --- LLM clients.---
-class OpenAIClient(BaseLLMClient):
-    """OpenAI-backed implementation for summaries and tags."""
-
-    _DEEP_CHUNK_SENTENCE_RANGE = (3, 5)
-    _DEEP_REDUCE_SENTENCE_RANGE = (6, 8)
+class OpenAILLMClient(BaseLLMClient):
+    """OpenAI ChatGPT-backed implementation for summaries and tags."""
 
     def __init__(self, config: LLMClientConfig):
         super().__init__(config)
@@ -366,7 +368,130 @@ class OpenAIClient(BaseLLMClient):
         return content.strip(), data
 
 
+class GeminiLLMClient(BaseLLMClient):
+    """Google Gemini-backed implementation for summaries and tags."""
+
+    # NOTE:
+    # Gemini 2.5 counts hidden "thoughts" tokens against maxOutputTokens,
+    # so we raise defaults to avoid truncated outputs.
+    _SUMMARY_QUICK_MAX_TOKENS = 1200
+    _SUMMARY_STANDARD_MAX_TOKENS = 2000
+    _SUMMARY_DEEP_CHUNK_MAX_TOKENS = 1200
+    _SUMMARY_DEEP_REDUCE_MAX_TOKENS = 2200
+    _TAGS_MAX_TOKENS = 800
+
+    def __init__(self, config: LLMClientConfig):
+        super().__init__(config)
+        base_url = (
+            config.base_url or "https://generativelanguage.googleapis.com/v1beta"
+        ).rstrip("/")
+        self._http_client = httpx.Client(
+            base_url=base_url,
+            headers={
+                "x-goog-api-key": config.api_key,
+                "Content-Type": "application/json",
+            },
+            timeout=config.timeout,
+        )
+
+    def _close(self):
+        """Implementation of BaseLLMClient._close()"""
+        try:
+            self._http_client.close()
+        except NotImplementedError:
+            self._logger.debug("%s does not implement _close", type(self).__name__)
+        except:
+            self._logger.debug("Internal errors occurred at %s", type(self).__name__)
+
+    def _chat_completion(
+        self,
+        messages: list[dict[str, str]],
+        *,
+        temperature: float,
+        max_tokens: int,
+    ) -> tuple[str, dict[str, Any]]:
+        system_texts: list[str] = []
+        contents: list[dict[str, Any]] = []
+        for message in messages:
+            role = message.get("role")
+            content = message.get("content", "")
+            if role == "system":
+                if content.strip():
+                    system_texts.append(content)
+                continue
+            gemini_role = "model" if role == "assistant" else "user"
+            contents.append(
+                {
+                    "role": gemini_role,
+                    "parts": [{"text": content}],
+                }
+            )
+
+        payload: dict[str, Any] = {
+            "contents": contents,
+            "generationConfig": {
+                "temperature": temperature,
+                "maxOutputTokens": max_tokens,
+            },
+        }
+        if system_texts:
+            payload["system_instruction"] = {
+                "parts": [{"text": "\n".join(system_texts)}]
+            }
+
+        # NOTE: REST API
+        # https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent
+        response = self._http_client.post(
+            f"/models/{self._config.model}:generateContent",
+            json=payload,
+        )
+        try:
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            status_code = exc.response.status_code
+            message = f"Gemini API error ({status_code})"
+            try:
+                data = exc.response.json()
+            except ValueError:
+                data = None
+            if isinstance(data, dict):
+                error = data.get("error")
+                if isinstance(error, dict):
+                    detail = str(error.get("message") or "").strip()
+                    status = str(error.get("status") or "").strip()
+                    code = error.get("code")
+                    code_text = str(code).strip() if code is not None else ""
+                    parts = [item for item in (code_text, status) if item]
+                    label = " ".join(parts)
+                    if detail:
+                        if label:
+                            message = f"Gemini API error ({label}): {detail}"
+                        else:
+                            message = f"Gemini API error: {detail}"
+                    elif label:
+                        message = f"Gemini API error ({label})"
+            elif exc.response.text:
+                message = f"Gemini API error ({status_code}): {exc.response.text}"
+            raise ZotomaticLLMAPIError(message) from exc
+        data = response.json()
+        content: str = ""
+        try:
+            parts = data["candidates"][0]["content"]["parts"]
+            if isinstance(parts, list):
+                content = "".join(
+                    part.get("text", "") for part in parts if isinstance(part, dict)
+                )
+        except (KeyError, IndexError, TypeError):  # pragma: no cover - defensive
+            self._logger.debug("Gemini response missing content field")
+        return content.strip(), data
+
+
 # TODO: ここの処理はzoteroClient, NoteBuilder同様にpipelineでやるべきかも
 def create_llm_client(settings: Mapping[str, object]) -> BaseLLMClient:
+    # TODO: インスタンス生成処理拡張. settingsからモデルに応じたインスタンスを返却するよう修正
     config = LLMClientConfig.from_settings(settings)
-    return OpenAIClient(config)
+    if config.provider == "openai":
+        return OpenAILLMClient(config)
+    if config.provider == "gemini":
+        return GeminiLLMClient(config)
+    raise ZotomaticLLMClientError(f"Unsupported LLM provider: {config.provider}")

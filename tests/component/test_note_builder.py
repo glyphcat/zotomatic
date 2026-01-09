@@ -22,12 +22,13 @@ def test_note_builder_generate_note(tmp_path: Path) -> None:
         tags=("tag1",),
         generated_tags=("tag2",),
         generated_summary="Summary",
-        pdf_path="/tmp/file.pdf",
+        pdf_path="/tmp/\u30de\u30a4\u30c8\u3099\u30e9\u30a4\u30d5\u3099.pdf",
     )
     note = builder.generate_note(context)
     assert note.path.exists()
     rendered = note.path.read_text(encoding="utf-8")
     assert "citekey: CITE" in rendered
+    assert "pdf_local: /tmp/\u30de\u30a4\u30c9\u30e9\u30a4\u30d6.pdf" in rendered
     assert "zotomatic_summary_status" in rendered
     assert "tags:" in rendered
     assert "Summary" in rendered

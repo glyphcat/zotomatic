@@ -19,15 +19,40 @@ def test_llm_client_config_requires_api_key() -> None:
 
 def test_llm_client_config_from_settings() -> None:
     config = LLMClientConfig.from_settings({
-        "llm_openai_api_key": "key",
-        "llm_openai_base_url": "https://example.com",
-        "llm_openai_model": "model",
+        "llm": {
+            "provider": "openai",
+            "providers": {
+                "openai": {
+                    "api_key": "key",
+                    "base_url": "https://example.com",
+                    "model": "model",
+                }
+            },
+        },
         "llm_output_language": "ja",
     })
+    assert config.provider == "openai"
     assert config.api_key == "key"
     assert config.base_url == "https://example.com"
     assert config.model == "model"
     assert config.language_code == "ja"
+
+
+def test_llm_client_config_from_settings_gemini() -> None:
+    config = LLMClientConfig.from_settings({
+        "llm": {
+            "provider": "gemini",
+            "providers": {
+                "gemini": {
+                    "api_key": "gem-key",
+                }
+            },
+        }
+    })
+    assert config.provider == "gemini"
+    assert config.api_key == "gem-key"
+    assert config.model == "gemini-2.0-flash"
+    assert config.base_url == "https://generativelanguage.googleapis.com/v1beta"
 
 
 def test_summary_mode_from_value() -> None:
