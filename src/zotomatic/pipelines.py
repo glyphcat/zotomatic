@@ -14,6 +14,7 @@ from pyzotero import zotero
 from zotomatic import config
 from zotomatic.errors import ZotomaticCLIError, ZotomaticLLMConfigError
 from zotomatic.llm import create_llm_client
+from zotomatic.llm.types import LLM_PROVIDER_DEFAULTS
 from zotomatic.logging import get_logger
 from zotomatic.note.builder import NoteBuilder
 from zotomatic.note.types import (
@@ -410,19 +411,51 @@ def run_init(cli_options: Mapping[str, Any] | None = None):
     settings = config.get_config(cli_options)
 
     if init_result.config_created:
-        print(f"Config: created {init_result.config_path}")
+        print(f"Config created: {init_result.config_path}")
     elif init_result.config_updated_keys:
         print(
-            f"Config: updated {init_result.config_path} "
+            f"Config updated: {init_result.config_path} "
             f"(added: {', '.join(init_result.config_updated_keys)})"
         )
     else:
-        print(f"Config: exists {init_result.config_path}")
+        print(f"Config exists: {init_result.config_path}")
 
     if init_result.template_created:
-        print(f"Template: created {init_result.template_path}")
+        print(f"Template created: {init_result.template_path}")
     else:
-        print(f"Template: exists {init_result.template_path}")
+        print(f"Template exists: {init_result.template_path}")
+
+    llm_provider = cli_options.get("llm_provider")
+    if llm_provider:
+        provider = str(llm_provider).strip().lower()
+        if provider not in LLM_PROVIDER_DEFAULTS:
+            logger.error("Unsupported LLM provider: %s", provider)
+            return
+        updated = config.update_config_section_value(
+            init_result.config_path, "llm", "provider", provider
+        )
+        defaults = LLM_PROVIDER_DEFAULTS.get(provider, {})
+        model = defaults.get("model")
+        base_url = defaults.get("base_url")
+        if model:
+            config.update_config_section_value(
+                init_result.config_path,
+                f"llm.providers.{provider}",
+                "model",
+                model,
+            )
+        if base_url:
+            config.update_config_section_value(
+                init_result.config_path,
+                f"llm.providers.{provider}",
+                "base_url",
+                base_url,
+            )
+        config.normalize_config(init_result.config_path)
+        if updated:
+            print(f"Config updated: llm.provider={provider}")
+        else:
+            print(f"Config exists: llm.provider={provider}")
 
     db_config = WatcherStateRepositoryConfig.from_settings(settings)
     db_path = db_config.sqlite_path.expanduser()
@@ -434,9 +467,9 @@ def run_init(cli_options: Mapping[str, Any] | None = None):
         return
 
     if db_exists:
-        print(f"DB: exists {db_path}")
+        print(f"DB exists: {db_path}")
     else:
-        print(f"DB: initialized {db_path}")
+        print(f"DB initialized: {db_path}")
 
 
 def stub_run_backfill(cli_options: Mapping[str, Any] | None = None): ...
@@ -534,14 +567,33 @@ def run_doctor(cli_options: Mapping[str, Any] | None = None):
         else:
             _ok("Template", f"template file exists: {template_file}")
 
-    llm_api_key = str(settings.get("llm_openai_api_key") or "").strip()
-    if not llm_api_key:
-        _warn(
-            "LLM",
-            "llm_openai_api_key is not set; LLM summary/tag generation is disabled",
-        )
-    else:
-        _ok("LLM", "llm_openai_api_key is configured")
+    summary_enabled = bool(settings.get("llm_summary_enabled", True))
+    tag_enabled = bool(settings.get("llm_tag_enabled", True))
+    if summary_enabled or tag_enabled:
+        llm_section = settings.get("llm")
+        provider = None
+        provider_settings = None
+        if isinstance(llm_section, Mapping):
+            provider = str(llm_section.get("provider") or "").strip().lower()
+            providers = llm_section.get("providers")
+            if provider and isinstance(providers, Mapping):
+                provider_settings = providers.get(provider)
+        if not provider:
+            _warn(
+                "LLM",
+                "LLM summaries/tags are enabled, but llm.provider is not set",
+            )
+        else:
+            api_key = ""
+            if isinstance(provider_settings, Mapping):
+                api_key = str(provider_settings.get("api_key") or "").strip()
+            if not api_key:
+                _warn(
+                    "LLM",
+                    f"LLM provider is '{provider}', but api_key is missing; summaries/tags will be skipped",
+                )
+            else:
+                _ok("LLM", f"LLM provider '{provider}' is configured")
 
     daily_limit = settings.get("llm_daily_limit")
     try:
@@ -618,13 +670,29 @@ def run_config_show(cli_options: Mapping[str, Any] | None = None):
     settings = config.get_config_with_sources(cli_options)
     keys = config.user_config_keys()
     visible_items = {k: settings.get(k, (None, "unset")) for k in keys}
+    llm_entry = settings.get("llm")
+    if llm_entry:
+        llm_value, llm_source = llm_entry
+        if isinstance(llm_value, Mapping):
+            provider = llm_value.get("provider")
+            if provider is not None:
+                visible_items["llm.provider"] = (provider, llm_source)
+            providers = llm_value.get("providers")
+            if provider and isinstance(providers, Mapping):
+                provider_settings = providers.get(str(provider))
+                if isinstance(provider_settings, Mapping):
+                    for item_key in ("api_key", "model", "base_url"):
+                        if item_key in provider_settings:
+                            visible_items[
+                                f"llm.providers.{provider}.{item_key}"
+                            ] = (provider_settings.get(item_key), llm_source)
     if not visible_items:
         print("No configurable settings available.")
         return 0
     width = max(len(key) for key in visible_items)
     rendered: dict[str, str] = {}
     for key, (value, _source) in visible_items.items():
-        if key == "llm_openai_api_key" and value:
+        if key.startswith("llm.providers.") and key.endswith(".api_key") and value:
             raw = str(value)
             if len(raw) <= 8:
                 masked = "***"
@@ -655,14 +723,38 @@ def run_config_show(cli_options: Mapping[str, Any] | None = None):
 def run_config_default(cli_options: Mapping[str, Any] | None = None):
     _ = cli_options
     result = config.reset_config_to_defaults()
-    print(f"Config: reset to defaults at {result.config_path}")
+    print(f"Config reset to defaults: {result.config_path}")
     if result.backup_path:
-        print(f"Config: backup created at {result.backup_path}")
-    print("Config: set pdf_dir before running scan")
+        print(f"Config backup created: {result.backup_path}")
+    print("Warning: set pdf_dir before running scan")
     if result.template_created:
-        print(f"Template: created {result.template_path}")
+        print(f"Template created: {result.template_path}")
     else:
-        print(f"Template: exists {result.template_path}")
+        print(f"Template exists: {result.template_path}")
+    return 0
+
+
+def run_config_migrate(cli_options: Mapping[str, Any] | None = None):
+    _ = cli_options
+    current_version = config.get_schema_version()
+    if current_version >= config.current_schema_version():
+        print("Config migration not needed")
+        return 0
+    result = config.migrate_config()
+    normalized = config.normalize_config(result.config_path)
+    if result.updated_keys or result.removed_keys:
+        print(f"Config migrated: {result.config_path}")
+    if result.backup_path:
+        print(f"Config backup created: {result.backup_path}")
+    if result.updated_keys:
+        print(f"Updated keys: {', '.join(result.updated_keys)}")
+    if result.removed_keys:
+        unique_removed = sorted(set(result.removed_keys))
+        print(f"Removed keys: {', '.join(unique_removed)}")
+    if normalized.normalized and not (result.updated_keys or result.removed_keys):
+        print(f"Config normalized: {normalized.config_path}")
+        if normalized.backup_path:
+            print(f"Config backup created: {normalized.backup_path}")
     return 0
 
 
@@ -681,7 +773,7 @@ def run_template_create(cli_options: Mapping[str, Any] | None = None):
 
     template_target = Path(str(template_path)).expanduser()
     if template_target.exists():
-        print(f"Template: exists {template_target}")
+        print(f"Template exists: {template_target}")
     else:
         template_target.parent.mkdir(parents=True, exist_ok=True)
         source_template = Path(__file__).resolve().parent / "templates" / "note.md"
@@ -692,12 +784,12 @@ def run_template_create(cli_options: Mapping[str, Any] | None = None):
             source_template.read_text(encoding="utf-8"),
             encoding="utf-8",
         )
-        print(f"Template: created {template_target}")
+        print(f"Template created: {template_target}")
 
     if updated:
-        print(f"Config: updated template_path={template_target}")
+        print(f"Config updated: template_path={template_target}")
     else:
-        print(f"Config: exists template_path={template_target}")
+        print(f"Config exists: template_path={template_target}")
 
 
 def run_template_set(cli_options: Mapping[str, Any] | None = None):
@@ -716,6 +808,88 @@ def run_template_set(cli_options: Mapping[str, Any] | None = None):
     if not template_target.exists():
         logger.warning("Template not found: %s", template_target)
     if updated:
-        print(f"Config: updated template_path={template_target}")
+        print(f"Config updated: template_path={template_target}")
     else:
-        print(f"Config: exists template_path={template_target}")
+        print(f"Config exists: template_path={template_target}")
+
+
+def _resolve_llm_provider(settings: Mapping[str, object]) -> str | None:
+    llm_section = settings.get("llm")
+    if isinstance(llm_section, Mapping):
+        provider = llm_section.get("provider")
+        if provider:
+            return str(provider).strip().lower()
+    return None
+
+
+def run_llm_set(cli_options: Mapping[str, Any] | None = None):
+    logger = get_logger("zotomatic.llm", False)
+    cli_options = dict(cli_options or {})
+    llm_provider = cli_options.get("llm_provider")
+    init_result = config.initialize_config(cli_options)
+    config_path = init_result.config_path
+
+    settings = config.get_config(cli_options)
+    if not llm_provider:
+        llm_provider = _resolve_llm_provider(settings)
+    if not llm_provider:
+        logger.error("Missing required option: --provider")
+        return
+
+    provider = str(llm_provider).strip().lower()
+    if provider not in LLM_PROVIDER_DEFAULTS:
+        logger.error("Unsupported LLM provider: %s", provider)
+        return
+    defaults = LLM_PROVIDER_DEFAULTS.get(provider, {})
+    api_key = cli_options.get("llm_api_key")
+    model = cli_options.get("llm_model") or defaults.get("model")
+    base_url = cli_options.get("llm_base_url") or defaults.get("base_url")
+
+    updates: list[str] = []
+    if config.update_config_section_value(config_path, "llm", "provider", provider):
+        updates.append("llm.provider")
+    if api_key is not None:
+        if config.update_config_section_value(
+            config_path,
+            f"llm.providers.{provider}",
+            "api_key",
+            api_key,
+        ):
+            updates.append(f"llm.providers.{provider}.api_key")
+    else:
+        provider_settings = {}
+        llm_section = settings.get("llm")
+        if isinstance(llm_section, Mapping):
+            providers = llm_section.get("providers")
+            if isinstance(providers, Mapping):
+                provider_settings = providers.get(provider, {}) or {}
+        existing_key = ""
+        if isinstance(provider_settings, Mapping):
+            existing_key = str(provider_settings.get("api_key") or "").strip()
+        if not existing_key:
+            print(
+                "Warning: API key not provided; set "
+                f"ZOTOMATIC_LLM_{provider.upper()}_API_KEY to enable LLM calls."
+            )
+    if model:
+        if config.update_config_section_value(
+            config_path,
+            f"llm.providers.{provider}",
+            "model",
+            model,
+        ):
+            updates.append(f"llm.providers.{provider}.model")
+    if base_url:
+        if config.update_config_section_value(
+            config_path,
+            f"llm.providers.{provider}",
+            "base_url",
+            base_url,
+        ):
+            updates.append(f"llm.providers.{provider}.base_url")
+
+    if updates:
+        print(f"LLM settings updated: {', '.join(updates)}")
+    else:
+        print("LLM settings already up to date")
+    config.normalize_config(config_path)

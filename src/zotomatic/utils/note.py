@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import unicodedata
+
 
 def parse_frontmatter(text: str) -> dict[str, object]:
     if not text.startswith("---"):
@@ -31,6 +33,12 @@ def parse_tags(value: str) -> tuple[str, ...]:
         if item:
             tags.append(item)
     return tuple(tags)
+
+
+def normalize_path_value(value: str) -> str:
+    if not value:
+        return value
+    return unicodedata.normalize("NFC", value)
 
 
 def extract_summary_block(text: str) -> str:

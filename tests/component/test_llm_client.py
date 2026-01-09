@@ -11,6 +11,7 @@ from zotomatic.llm.types import LLMClientConfig, LLMSummaryContext, LLMTagsConte
 class FakeLLMClient(BaseLLMClient):
     def __init__(self, response_text: str) -> None:
         config = LLMClientConfig(
+            provider="openai",
             base_url="https://example.com",
             api_key="key",
             model="model",

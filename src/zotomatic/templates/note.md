@@ -8,7 +8,7 @@
 # - tags
 #
 # Keys not listed above are optional and safe to edit/remove.
-# Keep template variables like {title}; removing them leaves blanks.
+# Keep template variables like {{title}}; removing them leaves blanks.
 type: paper
 title: "{title}"
 citekey: {citekey}

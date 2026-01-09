@@ -59,7 +59,10 @@ def test_run_doctor(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         "pdf_dir": str(pdf_dir),
         "note_dir": str(note_dir),
         "template_path": str(template_path),
-        "llm_openai_api_key": "",
+        "llm": {
+            "provider": "openai",
+            "providers": {"openai": {"api_key": ""}},
+        },
         "zotero_api_key": "",
         "zotero_library_id": "",
         "zotero_library_scope": "user",
@@ -99,9 +102,73 @@ def test_run_init(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytes
     )
 
     captured = capsys.readouterr()
-    assert "Config:" in captured.out
-    assert "Template:" in captured.out
-    assert "DB:" in captured.out
+    assert "Config " in captured.out
+    assert "Template " in captured.out
+    assert "DB " in captured.out
+
+
+def test_run_init_with_llm_provider(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    config_path = tmp_path / "config.toml"
+    template_path = tmp_path / "note.md"
+    db_path = tmp_path / "state.db"
+    templates_dir = tmp_path / "templates"
+    templates_dir.mkdir()
+    source_template = templates_dir / "note.md"
+    source_template.write_text("Template", encoding="utf-8")
+    monkeypatch.setattr(pipelines.config, "_DEFAULT_CONFIG", config_path)
+    monkeypatch.setattr(pipelines.config, "_TEMPLATES_DIR", templates_dir)
+    monkeypatch.setattr(
+        pipelines.WatcherStateRepositoryConfig,
+        "from_settings",
+        lambda _settings: WatcherStateRepositoryConfig(sqlite_path=db_path),
+    )
+    monkeypatch.setattr(
+        pipelines.WatcherStateRepository, "from_settings", lambda _settings: object()
+    )
+
+    pipelines.run_init(
+        {
+            "pdf_dir": str(tmp_path / "pdfs"),
+            "note_dir": str(tmp_path / "notes"),
+            "template_path": str(template_path),
+            "llm_provider": "openai",
+        }
+    )
+
+    captured = capsys.readouterr()
+    assert "Config updated: llm.provider=openai" in captured.out
+    text = config_path.read_text(encoding="utf-8")
+    assert "[llm]" in text
+    assert "provider = \"openai\"" in text
+    assert "[llm.providers.openai]" in text
+    assert "model = \"gpt-4o-mini\"" in text
+
+
+def test_run_llm_set(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+    config_path = tmp_path / "config.toml"
+    templates_dir = tmp_path / "templates"
+    templates_dir.mkdir()
+    source_template = templates_dir / "note.md"
+    source_template.write_text("Template", encoding="utf-8")
+    monkeypatch.setattr(pipelines.config, "_DEFAULT_CONFIG", config_path)
+    monkeypatch.setattr(pipelines.config, "_TEMPLATES_DIR", templates_dir)
+
+    pipelines.run_llm_set(
+        {
+            "llm_provider": "openai",
+            "llm_api_key": "key",
+        }
+    )
+
+    captured = capsys.readouterr()
+    assert "LLM settings updated" in captured.out
+    text = config_path.read_text(encoding="utf-8")
+    assert "[llm]" in text
+    assert "provider = \"openai\"" in text
+    assert "[llm.providers.openai]" in text
+    assert "api_key = \"key\"" in text
 
 
 def test_run_scan_path_mode(
@@ -359,6 +426,43 @@ def test_run_config_show_filters_internal_keys(
     assert "(unset)" in captured.out
 
 
+def test_run_config_show_masks_llm_api_key(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    settings = {
+        "note_dir": ("/notes", "default"),
+        "llm": (
+            {
+                "provider": "openai",
+                "providers": {
+                    "openai": {
+                        "api_key": "secret-key",
+                        "model": "gpt-4o-mini",
+                    }
+                },
+            },
+            "file",
+        ),
+    }
+
+    monkeypatch.setattr(
+        pipelines.config, "get_config_with_sources", lambda _opts: settings
+    )
+    monkeypatch.setattr(
+        pipelines.config,
+        "user_config_keys",
+        lambda: {"note_dir"},
+    )
+
+    result = pipelines.run_config_show({})
+    assert result == 0
+    captured = capsys.readouterr()
+    assert "llm.provider" in captured.out
+    assert "llm.providers.openai.api_key" in captured.out
+    assert "secret-key" not in captured.out
+    assert "llm.providers.openai.model" in captured.out
+
+
 def test_run_config_default(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -382,8 +486,8 @@ def test_run_config_default(
     result = pipelines.run_config_default({})
     assert result == 0
     captured = capsys.readouterr()
-    assert "Config: reset to defaults" in captured.out
-    assert "Config: backup created" in captured.out
-    assert "Template:" in captured.out
+    assert "Config reset to defaults" in captured.out
+    assert "Config backup created" in captured.out
+    assert "Template " in captured.out
     assert cfg_path.exists()
     assert cfg_path.with_name("config.toml.bak").exists()

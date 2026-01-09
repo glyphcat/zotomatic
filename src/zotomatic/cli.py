@@ -52,6 +52,9 @@ def _build_parser() -> argparse.ArgumentParser:
     config_subparsers = config_parser.add_subparsers(dest="config_command")
     config_subparsers.add_parser("show", help="Show effective configuration values")
     config_subparsers.add_parser("default", help="Reset config to defaults")
+    config_subparsers.add_parser(
+        "migrate", help="Migrate config values to the latest schema"
+    )
     subparsers.add_parser("doctor", help="Inspect project health")
     init = subparsers.add_parser("init", help="Initialize a Zotomatic workspace")
     init.add_argument(
@@ -69,6 +72,37 @@ def _build_parser() -> argparse.ArgumentParser:
         "--template-path",
         dest="template_path",
         help="Path to the note template",
+    )
+    init.add_argument(
+        "--llm-provider",
+        dest="llm_provider",
+        choices=["openai", "gemini", "chatgpt"],
+        help="Optional LLM provider (openai, gemini, chatgpt)",
+    )
+    llm = subparsers.add_parser("llm", help="Manage LLM settings")
+    llm_subparsers = llm.add_subparsers(dest="llm_command", required=True)
+    llm_set = llm_subparsers.add_parser("set", help="Set LLM configuration values")
+    llm_set.add_argument(
+        "--provider",
+        dest="llm_provider",
+        choices=["openai", "gemini", "chatgpt"],
+        required=True,
+        help="LLM provider (openai, gemini, chatgpt)",
+    )
+    llm_set.add_argument(
+        "--api-key",
+        dest="llm_api_key",
+        help="LLM API key",
+    )
+    llm_set.add_argument(
+        "--model",
+        dest="llm_model",
+        help="LLM model name",
+    )
+    llm_set.add_argument(
+        "--base-url",
+        dest="llm_base_url",
+        help="LLM base URL",
     )
     template = subparsers.add_parser("template", help="Manage note templates")
     template_subparsers = template.add_subparsers(
@@ -101,8 +135,10 @@ def _print_help() -> None:
     print("  config                Show effective configuration values (default)")
     print("  config show           Show effective configuration values")
     print("  config default        Reset config to defaults")
+    print("  config migrate        Migrate config values to the latest schema")
     print("  doctor                Inspect project health")
     print("  init                  Initialize a Zotomatic workspace")
+    print("  llm                   Manage LLM settings")
     print("  template create       Create a template and update config")
     print("  template set          Update config to use an existing template")
     print("")
@@ -121,6 +157,12 @@ def _print_help() -> None:
     print("    --pdf-dir PATH      (required) Directory containing PDF files")
     print("    --note-dir PATH     Override default note directory")
     print("    --template-path PATH  Override default template path")
+    print("    --llm-provider      Optional LLM provider (openai, gemini, chatgpt)")
+    print("  llm set:")
+    print("    --provider          (required) LLM provider (openai, gemini, chatgpt)")
+    print("    --api-key           LLM API key")
+    print("    --model             LLM model name")
+    print("    --base-url          LLM base URL")
     print("  template create/set:")
     print("    --path PATH         (required) Template file path")
 
@@ -131,6 +173,9 @@ def _normalize_cli_options(namespace: argparse.Namespace) -> dict[str, Any]:
         for key, value in vars(namespace).items()
         if key not in {"command", "template_command", "config_command"}
     }
+    provider = cli_options.get("llm_provider")
+    if provider == "chatgpt":
+        cli_options["llm_provider"] = "openai"
     return {key: value for key, value in cli_options.items() if value is not None}
 
 
@@ -149,6 +194,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         "init": pipelines.run_init,
         "template": None,
         "config": None,
+        "llm": None,
     }
 
     command = args.command
@@ -172,8 +218,17 @@ def main(argv: Sequence[str] | None = None) -> None:
                 pipelines.run_config_show(cli_options)
             elif config_command == "default":
                 pipelines.run_config_default(cli_options)
+            elif config_command == "migrate":
+                pipelines.run_config_migrate(cli_options)
             else:  # pragma: no cover - argparse enforces choices
                 raise ZotomaticCLIError(f"Unknown config command: {config_command}")
+            return
+        if command == "llm":
+            llm_command = args.llm_command
+            if llm_command == "set":
+                pipelines.run_llm_set(cli_options)
+            else:  # pragma: no cover - argparse enforces choices
+                raise ZotomaticCLIError(f"Unknown llm command: {llm_command}")
             return
 
         handler = handlers[command]
