@@ -53,7 +53,7 @@ Initialize the config and template, and prepare the DB. On subsequent runs, it d
 ### Usage
 
 ```bash
-zotomatic init --pdf-dir <path> [--note-dir <path>] [--template-path <path>]
+zotomatic init --pdf-dir <path> [--note-dir <path>] [--template-path <path>] [--llm-provider <openai|gemini>]
 ```
 
 ### What gets created
@@ -79,12 +79,16 @@ zotomatic init --pdf-dir <path> [--note-dir <path>] [--template-path <path>]
 - `--template-path`
   - File path for the note template.
   - Example: `zotomatic init --pdf-dir ~/Zotero/storage --template-path ~/Zotomatic/templates/note.md`
+- `--llm-provider`
+  - LLM provider (`openai`, `gemini`).
+  - `chatgpt` is an alias for `openai`.
+  - Example: `zotomatic init --pdf-dir ~/Zotero/storage --llm-provider openai`
 
 ## config
 
 ### What it does
 
-Show the effective configuration or reset to defaults.
+Show the effective configuration, reset to defaults, or migrate schema versions.
 
 ### Usage
 
@@ -92,6 +96,7 @@ Show the effective configuration or reset to defaults.
 zotomatic config
 zotomatic config show
 zotomatic config default
+zotomatic config migrate
 ```
 
 ### Subcommands
@@ -102,6 +107,9 @@ zotomatic config default
 - `default`
   - Reset to defaults and create `config.toml.bak`.
   - Example: `zotomatic config default`
+- `migrate`
+  - Migrate config values to the latest schema.
+  - Example: `zotomatic config migrate`
 
 ## template
 
@@ -136,3 +144,34 @@ Check configuration, paths, and integration health.
 ```bash
 zotomatic doctor
 ```
+
+## llm
+
+### What it does
+
+Update LLM settings.
+
+### Usage
+
+```bash
+zotomatic llm set --provider <openai|gemini> [--api-key <key>] [--model <name>] [--base-url <url>]
+```
+
+### Subcommands
+
+- `set`
+  - Update LLM settings.
+  - `--provider` is required.
+  - `--api-key` is optional; if omitted, environment variables are used.
+
+### Options
+
+- `--provider` (required)
+  - LLM provider (`openai`, `gemini`).
+  - `chatgpt` is an alias for `openai`.
+- `--api-key`
+  - API key. If omitted, `ZOTOMATIC_LLM_<PROVIDER>_API_KEY` is used.
+- `--model`
+  - LLM model name.
+- `--base-url`
+  - LLM base URL.
