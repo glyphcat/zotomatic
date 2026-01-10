@@ -5,6 +5,7 @@ Zotomatic is a CLI tool that starts from research PDFs, uses bibliographic infor
 For PDFs managed in Zotero, Zotomatic can fetch metadata such as authors, title, and abstract to produce notes enriched with bibliographic details. It can also generate minimal notes for PDFs outside Zotero.
 
 Zotomatic can optionally integrate with an LLM to generate summaries and tags in a specified language and insert the results into notes.
+Supported: ChatGPT / Gemini
 Note: Output quality and accuracy depend on the LLM.
 
 Notes are plain Markdown files, and templates are fully user-defined. You can use them with any editor or knowledge tool, including Obsidian.
