@@ -80,7 +80,7 @@ Notes are plain Markdown files, and templates are fully user-defined. You can us
   Customize headings and sections to match your workflow.
 
 - **Optional LLM summaries and tags (language-selectable)**  
-  Generate summaries and tags via LLM when enabled (OpenAI API only for now).
+  Generate summaries and tags via LLM when enabled (default output is Japanese with other languages available).
 
 - **Multiple scan modes**  
   Use watch, once, or path mode to fit your workflow.
@@ -104,7 +104,7 @@ pip install zotomatic
 - **Spot-process PDFs outside Zotero**  
   Use `scan --path` for quick, file-specific note generation.
 - **Auto-insert summaries and tags (optional)**  
-  With an API key, generate summaries and tags in a chosen language (OpenAI API only for now).
+  With an API key, generate summaries and tags in a chosen language (ChatGPT and Gemini supported).
 
 If you want Zotero metadata, keep the Zotero desktop app running.
 
@@ -123,7 +123,7 @@ See `docs/en/getting-started.md` for step-by-step instructions.
 
 ## Roadmap
 
-- Support LLM providers beyond OpenAI (e.g., Gemini)
+- Support additional LLM providers
 
 Note: Roadmap items and timelines may change.
 
