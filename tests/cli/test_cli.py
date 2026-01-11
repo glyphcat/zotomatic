@@ -12,6 +12,15 @@ def test_cli_help(capsys: pytest.CaptureFixture[str]) -> None:
     assert "Zotomatic command-line interface" in captured.out
 
 
+def test_cli_version(capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(cli, "__version__", "0.2.0")
+    with pytest.raises(SystemExit) as excinfo:
+        cli.main(["--version"])
+    assert excinfo.value.code == 0
+    captured = capsys.readouterr()
+    assert captured.out.strip() == "0.2.0"
+
+
 def test_cli_dispatch_scan(monkeypatch: pytest.MonkeyPatch) -> None:
     called = {}
 

@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Added `--version` to print the installed Zotomatic version.
+- Added version lookup helper (`__version__`) for the CLI.
+- Documented version check in configuration references (EN/JA).
 
 ## 0.2.0
 - Added Gemini support as an LLM provider alongside ChatGPT.
