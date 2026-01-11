@@ -118,6 +118,8 @@ Note: `notes_encoding` and `llm_timeout` are best set in `config.toml`.
 - `standard`: summary using the abstract and section snippets.
 - `deep`: detailed summary produced by chunking and merging.
 
+You can override the mode per run with `zotomatic scan --summary-mode <mode>`. This does not update your config file.
+
 ## `note_title_pattern` (note filename template)
 
 `note_title_pattern` uses `{{ key }}` placeholders to build note filenames. Missing values become empty strings. If no extension is specified, `.md` is appended and filenames are sanitized.

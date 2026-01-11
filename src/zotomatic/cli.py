@@ -48,6 +48,12 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Rescan PDFs and generate missing notes, ignoring watcher state",
     )
+    scan.add_argument(
+        "--summary-mode",
+        dest="llm_summary_mode",
+        choices=["quick", "standard", "deep"],
+        help="Override summary mode for this scan only (quick, standard, deep)",
+    )
     config_parser = subparsers.add_parser("config", help="Manage configuration values")
     config_subparsers = config_parser.add_subparsers(dest="config_command")
     config_subparsers.add_parser("show", help="Show effective configuration values")
@@ -153,6 +159,9 @@ def _print_help() -> None:
         "    --path PATH [...]   Generate notes for specific PDFs (processed in order) and exit"
     )
     print("    --force             Rescan PDFs and generate missing notes")
+    print(
+        "    --summary-mode MODE Override summary mode for this scan only (quick, standard, deep)"
+    )
     print("  init:")
     print("    --pdf-dir PATH      (required) Directory containing PDF files")
     print("    --note-dir PATH     Override default note directory")
