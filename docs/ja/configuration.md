@@ -16,6 +16,8 @@
 
 ## 設定キー一覧
 
+### 基本設定
+
 | config キー | 環境変数キー | 区分 | 意味 |
 | --- | --- | --- | --- |
 | `note_dir` | `ZOTOMATIC_NOTE_DIR` | 任意 | 生成ノートの出力先ディレクトリ。 |
@@ -23,10 +25,9 @@
 | `pdf_dir` | `ZOTOMATIC_PDF_DIR` | 必須 | 監視対象となる PDF 格納ディレクトリ。 |
 | `llm_output_language` | `ZOTOMATIC_LLM_OUTPUT_LANGUAGE` | 任意 | LLM 出力言語コード。指定できる言語コード: `en`, `ja`, `zh`, `ko`, `es`, `pt`, `fr`, `de`, `it`, `nl`, `sv`, `pl`, `tr`, `ru`。 |
 | `llm_summary_mode` | `ZOTOMATIC_LLM_SUMMARY_MODE` | 任意 | 要約モード: `quick`, `standard`, `deep`。 |
-| `tag_generation_limit` | `ZOTOMATIC_TAG_GENERATION_LIMIT` | 任意 | タグ生成の最大数。 |
+| `llm_tag_limit` | `ZOTOMATIC_LLM_TAG_LIMIT` | 任意 | タグ生成の最大数。 |
 | `llm_tag_enabled` | `ZOTOMATIC_LLM_TAG_ENABLED` | 任意 | LLM によるタグ生成を有効化。 |
 | `llm_summary_enabled` | `ZOTOMATIC_LLM_SUMMARY_ENABLED` | 任意 | LLM による要約生成を有効化。 |
-| `llm_openai_api_key` | `ZOTOMATIC_LLM_OPENAI_API_KEY` | 条件付き必須 | OpenAI を使う場合に必要。 |
 | `llm_timeout` | `ZOTOMATIC_LLM_TIMEOUT` | 任意 | LLM API リクエストのタイムアウト秒数 (TOML の float で指定)。 |
 | `llm_daily_limit` | `ZOTOMATIC_LLM_DAILY_LIMIT` | 任意 | LLM 実行回数の 1 日あたり上限。 |
 | `zotero_api_key` | `ZOTOMATIC_ZOTERO_API_KEY` | 条件付き必須 | Zotero 解決を使う場合に必要。 |
@@ -34,6 +35,21 @@
 | `zotero_library_scope` | `ZOTOMATIC_ZOTERO_LIBRARY_SCOPE` | 任意 | Zotero のスコープ: `user` / `group`。 |
 | `note_title_pattern` | `ZOTOMATIC_NOTE_TITLE_PATTERN` | 任意 | ノートのファイル名テンプレート。 |
 | `template_path` | `ZOTOMATIC_TEMPLATE_PATH` | 任意 | ノートテンプレートのパス。 |
+
+### LLM 設定
+
+LLM は `[llm]` と `[llm.providers.<provider>]` で設定します。`llm.provider` は必須です。
+ドキュメント上は ChatGPT と表記していますが、設定値は `openai` を使用します。
+
+| config キー | 環境変数キー | 区分 | 意味 |
+| --- | --- | --- | --- |
+| `llm.provider` | `ZOTOMATIC_LLM_PROVIDER` | 条件付き必須 | LLM プロバイダ (`openai` / `gemini`)。 |
+| `llm.providers.openai.api_key` | `ZOTOMATIC_LLM_OPENAI_API_KEY` | 条件付き必須 | ChatGPT(OpenAI) を使う場合に必要。 |
+| `llm.providers.openai.model` | `ZOTOMATIC_LLM_OPENAI_MODEL` | 任意 | ChatGPT のモデル名。 |
+| `llm.providers.openai.base_url` | `ZOTOMATIC_LLM_OPENAI_BASE_URL` | 任意 | ChatGPT のベース URL。 |
+| `llm.providers.gemini.api_key` | `ZOTOMATIC_LLM_GEMINI_API_KEY` | 条件付き必須 | Gemini を使う場合に必要。 |
+| `llm.providers.gemini.model` | `ZOTOMATIC_LLM_GEMINI_MODEL` | 任意 | Gemini のモデル名。 |
+| `llm.providers.gemini.base_url` | `ZOTOMATIC_LLM_GEMINI_BASE_URL` | 任意 | Gemini のベース URL。 |
 
 区分の意味:
 
@@ -49,10 +65,9 @@
 | `notes_encoding` | `utf-8` |
 | `llm_output_language` | `ja` |
 | `llm_summary_mode` | `quick` |
-| `tag_generation_limit` | `8` |
+| `llm_tag_limit` | `8` |
 | `llm_tag_enabled` | `true` |
 | `llm_summary_enabled` | `true` |
-| `llm_openai_api_key` | `(空)` |
 | `llm_timeout` | `30.0` |
 | `llm_daily_limit` | `50` |
 | `zotero_api_key` | `(空)` |
@@ -60,24 +75,36 @@
 | `zotero_library_scope` | `user` |
 | `note_title_pattern` | `{{ year }}-{{ slug80 }}-{{ citekey }}` |
 | `template_path` | `~/Zotomatic/templates/note.md` |
+| `llm.provider` | `(空)` |
+| `llm.providers.openai.model` | `gpt-4o-mini` |
+| `llm.providers.openai.base_url` | `https://api.openai.com/v1` |
+| `llm.providers.gemini.model` | `gemini-2.0-flash` |
+| `llm.providers.gemini.base_url` | `https://generativelanguage.googleapis.com/v1beta` |
 
 ### 設定ファイル　（config.toml）
 
 ```toml
-llm_openai_api_key = "sk-..."
 pdf_dir = "~/Zotero/storage"
 note_dir = "~/Documents/Obsidian/Zotomatic"
 note_title_pattern = "{{ year }}-{{ slug80 }}-{{ citekey }}"
 template_path = "~/Zotomatic/templates/note.md"
+
+[llm]
+provider = "openai"
+
+[llm.providers.openai]
+api_key = "sk-..."
 ```
 
 ### 環境変数
 
 一覧の環境変数キーのみが有効です。接頭辞を除去して小文字化したものが設定キーになります。
+LLM は `ZOTOMATIC_LLM_PROVIDER` と各プロバイダのキー (`ZOTOMATIC_LLM_OPENAI_API_KEY` など) を組み合わせて指定します。
 
 例:
 
 ```bash
+export ZOTOMATIC_LLM_PROVIDER=openai
 export ZOTOMATIC_LLM_OPENAI_API_KEY=...
 ```
 
@@ -117,6 +144,8 @@ export ZOTOMATIC_LLM_OPENAI_API_KEY=...
 - `quick`: アブストラクト中心の短い要約。
 - `standard`: アブストラクトと各セクションの抜粋を使った要約。
 - `deep`: 本文を分割して要約し、最後に統合する詳細要約。
+
+実行ごとに一時上書きする場合は `zotomatic scan --summary-mode <mode>` を使います（設定ファイルは変更されません）。
 
 ## `note_title_pattern` (ノート名テンプレート) について
 

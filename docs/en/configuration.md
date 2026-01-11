@@ -16,6 +16,8 @@ This document lists the settings that users can specify via the config file or e
 
 ## Settings list
 
+### Core settings
+
 | config key | env var key | required | description |
 | --- | --- | --- | --- |
 | `note_dir` | `ZOTOMATIC_NOTE_DIR` | optional | Output directory for notes. |
@@ -23,10 +25,9 @@ This document lists the settings that users can specify via the config file or e
 | `pdf_dir` | `ZOTOMATIC_PDF_DIR` | required | Root directory containing PDFs to scan. |
 | `llm_output_language` | `ZOTOMATIC_LLM_OUTPUT_LANGUAGE` | optional | Output language code for LLM. Valid codes: `en`, `ja`, `zh`, `ko`, `es`, `pt`, `fr`, `de`, `it`, `nl`, `sv`, `pl`, `tr`, `ru`. |
 | `llm_summary_mode` | `ZOTOMATIC_LLM_SUMMARY_MODE` | optional | Summary mode: `quick`, `standard`, `deep`. |
-| `tag_generation_limit` | `ZOTOMATIC_TAG_GENERATION_LIMIT` | optional | Maximum number of tags to generate. |
+| `llm_tag_limit` | `ZOTOMATIC_LLM_TAG_LIMIT` | optional | Maximum number of tags to generate. |
 | `llm_tag_enabled` | `ZOTOMATIC_LLM_TAG_ENABLED` | optional | Enable LLM tag generation. |
 | `llm_summary_enabled` | `ZOTOMATIC_LLM_SUMMARY_ENABLED` | optional | Enable LLM summaries. |
-| `llm_openai_api_key` | `ZOTOMATIC_LLM_OPENAI_API_KEY` | conditional | Required when using OpenAI. |
 | `llm_timeout` | `ZOTOMATIC_LLM_TIMEOUT` | optional | LLM API timeout in seconds (TOML float). |
 | `llm_daily_limit` | `ZOTOMATIC_LLM_DAILY_LIMIT` | optional | Daily limit for LLM calls. |
 | `zotero_api_key` | `ZOTOMATIC_ZOTERO_API_KEY` | conditional | Required for Zotero integration. |
@@ -34,6 +35,21 @@ This document lists the settings that users can specify via the config file or e
 | `zotero_library_scope` | `ZOTOMATIC_ZOTERO_LIBRARY_SCOPE` | optional | Zotero scope: `user` / `group`. |
 | `note_title_pattern` | `ZOTOMATIC_NOTE_TITLE_PATTERN` | optional | Filename template for notes. |
 | `template_path` | `ZOTOMATIC_TEMPLATE_PATH` | optional | File path to the note template. |
+
+### LLM settings
+
+LLM settings live under `[llm]` and `[llm.providers.<provider>]`. `llm.provider` is required.
+Documentation uses ChatGPT naming, but config uses `openai`.
+
+| config key | env var key | required | description |
+| --- | --- | --- | --- |
+| `llm.provider` | `ZOTOMATIC_LLM_PROVIDER` | conditional | LLM provider (`openai` / `gemini`). |
+| `llm.providers.openai.api_key` | `ZOTOMATIC_LLM_OPENAI_API_KEY` | conditional | Required for ChatGPT (OpenAI). |
+| `llm.providers.openai.model` | `ZOTOMATIC_LLM_OPENAI_MODEL` | optional | ChatGPT model name. |
+| `llm.providers.openai.base_url` | `ZOTOMATIC_LLM_OPENAI_BASE_URL` | optional | ChatGPT base URL. |
+| `llm.providers.gemini.api_key` | `ZOTOMATIC_LLM_GEMINI_API_KEY` | conditional | Required for Gemini. |
+| `llm.providers.gemini.model` | `ZOTOMATIC_LLM_GEMINI_MODEL` | optional | Gemini model name. |
+| `llm.providers.gemini.base_url` | `ZOTOMATIC_LLM_GEMINI_BASE_URL` | optional | Gemini base URL. |
 
 Notes on required/optional:
 
@@ -49,10 +65,9 @@ Notes on required/optional:
 | `notes_encoding` | `utf-8` |
 | `llm_output_language` | `ja` |
 | `llm_summary_mode` | `quick` |
-| `tag_generation_limit` | `8` |
+| `llm_tag_limit` | `8` |
 | `llm_tag_enabled` | `true` |
 | `llm_summary_enabled` | `true` |
-| `llm_openai_api_key` | `(empty)` |
 | `llm_timeout` | `30.0` |
 | `llm_daily_limit` | `50` |
 | `zotero_api_key` | `(empty)` |
@@ -60,24 +75,36 @@ Notes on required/optional:
 | `zotero_library_scope` | `user` |
 | `note_title_pattern` | `{{ year }}-{{ slug80 }}-{{ citekey }}` |
 | `template_path` | `~/Zotomatic/templates/note.md` |
+| `llm.provider` | `(empty)` |
+| `llm.providers.openai.model` | `gpt-4o-mini` |
+| `llm.providers.openai.base_url` | `https://api.openai.com/v1` |
+| `llm.providers.gemini.model` | `gemini-2.0-flash` |
+| `llm.providers.gemini.base_url` | `https://generativelanguage.googleapis.com/v1beta` |
 
 ### Config file example (config.toml)
 
 ```toml
-llm_openai_api_key = "sk-..."
 pdf_dir = "~/Zotero/storage"
 note_dir = "~/Documents/Obsidian/Zotomatic"
 note_title_pattern = "{{ year }}-{{ slug80 }}-{{ citekey }}"
 template_path = "~/Zotomatic/templates/note.md"
+
+[llm]
+provider = "openai"
+
+[llm.providers.openai]
+api_key = "sk-..."
 ```
 
 ### Environment variables
 
 Only the environment variable keys listed above are effective. The prefix is removed and lowercased to map to config keys.
+Set `ZOTOMATIC_LLM_PROVIDER` and the provider-specific keys (for example, `ZOTOMATIC_LLM_OPENAI_API_KEY`) together.
 
 Example:
 
 ```bash
+export ZOTOMATIC_LLM_PROVIDER=openai
 export ZOTOMATIC_LLM_OPENAI_API_KEY=...
 ```
 
@@ -117,6 +144,8 @@ Note: `notes_encoding` and `llm_timeout` are best set in `config.toml`.
 - `quick`: short summary based mainly on the abstract.
 - `standard`: summary using the abstract and section snippets.
 - `deep`: detailed summary produced by chunking and merging.
+
+You can override the mode per run with `zotomatic scan --summary-mode <mode>`. This does not update your config file.
 
 ## `note_title_pattern` (note filename template)
 

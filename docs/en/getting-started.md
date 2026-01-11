@@ -29,7 +29,9 @@ At minimum, set `pdf_dir`. Adjust other settings as needed.
 - `note_dir`: output directory for notes (default used if unset)
 - `note_title_pattern` / `template_path`: note name and template (defaults used if unset)
 - `zotero_api_key` / `zotero_library_id`: required to use Zotero integration
-- `llm_openai_api_key`: required for LLM summaries and tags
+- `llm.provider`: required when using LLMs (`openai`, `gemini`)
+- `llm.providers.openai.api_key`: required for ChatGPT
+- `llm.providers.gemini.api_key`: required for Gemini
 
 If you want Zotero metadata, keep the Zotero desktop app running. Notes can still be generated for PDFs outside Zotero or when Zotero is not running, but metadata will be minimal.
 
@@ -40,6 +42,12 @@ pdf_dir = "~/Zotero/storage"
 note_dir = "~/Documents/Notes/Zotomatic"
 note_title_pattern = "{{ year }}-{{ slug80 }}-{{ citekey }}"
 template_path = "~/Zotomatic/templates/note.md"
+
+[llm]
+provider = "openai"
+
+[llm.providers.openai]
+api_key = "sk-..."
 ```
 
 Update settings via `config.toml` or environment variables. See `configuration.md` for the env var list.
@@ -88,6 +96,14 @@ With `--once` / `--watch`, include PDFs that were skipped in previous runs. Exis
 zotomatic scan --once --force
 ```
 
+### `--summary-mode <mode>` (one-time override)
+
+Override the summary detail level for this run only. This does not change your config file.
+
+```bash
+zotomatic scan --once --summary-mode deep
+```
+
 ## 6. LLM summaries and tags (optional)
 
-When `llm_openai_api_key` is set, Zotomatic can auto-insert summaries and tags into notes. If unset, notes are generated without LLM output.
+When `llm.provider` and an API key are set, Zotomatic can auto-insert summaries and tags into notes. If unset, notes are generated without LLM output.

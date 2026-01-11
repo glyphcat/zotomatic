@@ -53,7 +53,7 @@ zotomatic scan --path <pdf...>
 ### 使い方
 
 ```bash
-zotomatic init --pdf-dir <path> [--note-dir <path>] [--template-path <path>]
+zotomatic init --pdf-dir <path> [--note-dir <path>] [--template-path <path>] [--llm-provider <openai|gemini>]
 ```
 
 ### 何が作成されるか
@@ -79,6 +79,10 @@ zotomatic init --pdf-dir <path> [--note-dir <path>] [--template-path <path>]
 - `--template-path`
   - ノートテンプレートの保存先を指定します。
   - 例: `zotomatic init --pdf-dir ~/Zotero/storage --template-path ~/Zotomatic/templates/note.md`
+- `--llm-provider`
+  - LLM プロバイダを指定します (`openai`, `gemini`)。
+  - `chatgpt` は `openai` のエイリアスです。
+  - 例: `zotomatic init --pdf-dir ~/Zotero/storage --llm-provider openai`
 
 既存設定がある場合は不足キーのみ追記され、テンプレートは未作成なら生成されます。
 
@@ -86,7 +90,7 @@ zotomatic init --pdf-dir <path> [--note-dir <path>] [--template-path <path>]
 
 ### 何をするコマンドか
 
-現在の設定値を表示したり、既定値に戻します。
+現在の設定値を表示したり、既定値に戻したり、設定スキーマの移行を行います。
 
 ### 使い方
 
@@ -94,6 +98,7 @@ zotomatic init --pdf-dir <path> [--note-dir <path>] [--template-path <path>]
 zotomatic config
 zotomatic config show
 zotomatic config default
+zotomatic config migrate
 ```
 
 ### サブコマンド
@@ -104,6 +109,9 @@ zotomatic config default
 - `default`
   - 設定を既定へ戻し、`config.toml.bak` を作成します。
   - 例: `zotomatic config default`
+- `migrate`
+  - 既存の設定を最新のスキーマに移行します。
+  - 例: `zotomatic config migrate`
 
 ## template
 
@@ -138,3 +146,34 @@ zotomatic template set --path <path>
 ```bash
 zotomatic doctor
 ```
+
+## llm
+
+### 何をするコマンドか
+
+LLM 設定を更新します。
+
+### 使い方
+
+```bash
+zotomatic llm set --provider <openai|gemini> [--api-key <key>] [--model <name>] [--base-url <url>]
+```
+
+### サブコマンド
+
+- `set`
+  - LLM 設定を更新します。
+  - `--provider` は必須です。
+  - `--api-key` は任意で、未指定の場合は環境変数を参照します。
+
+### オプション
+
+- `--provider` (必須)
+  - LLM プロバイダを指定します (`openai`, `gemini`)。
+  - `chatgpt` は `openai` のエイリアスです。
+- `--api-key`
+  - API キーを指定します。未指定の場合は `ZOTOMATIC_LLM_<PROVIDER>_API_KEY` を参照します。
+- `--model`
+  - 使用するモデル名を指定します。
+- `--base-url`
+  - API のベース URL を指定します。

@@ -30,7 +30,9 @@ initコマンドは2回目以降の実行では既存の値を上書きせず、
 - `note_dir`: ノートの出力先 (未指定なら既定値)
 - `note_title_pattern` / `template_path`: ノート名・テンプレート (未指定なら既定値)
 - `zotero_api_key` / `zotero_library_id`: Zotero 連携を使う場合に必要
-- `llm_openai_api_key`: LLM による要約/タグ生成を使う場合に必要
+- `llm.provider`: LLM を使う場合に必要 (`openai`, `gemini`)
+- `llm.providers.openai.api_key`: ChatGPT を使う場合に必要
+- `llm.providers.gemini.api_key`: Gemini を使う場合に必要
 
 Zotero 連携でZoteroのメタデータよりノートを作成したい場合は、Zotero デスクトップアプリを起動しておくのが基本です。
 起動していない場合や Zotero 管理外の PDF でも、最小限のノートは生成できます。
@@ -42,6 +44,12 @@ pdf_dir = "~/Zotero/storage"
 note_dir = "~/Documents/Notes/Zotomatic"
 note_title_pattern = "{{ year }}-{{ slug80 }}-{{ citekey }}"
 template_path = "~/Zotomatic/templates/note.md"
+
+[llm]
+provider = "openai"
+
+[llm.providers.openai]
+api_key = "sk-..."
 ```
 
 設定値の変更は `config.toml` または環境変数で行います。環境変数の一覧は `configuration.md` を参照してください。
@@ -90,6 +98,14 @@ zotomatic scan --path ~/Downloads/a.pdf ~/Downloads/b.pdf
 zotomatic scan --once --force
 ```
 
+### `--summary-mode <mode>` (一時上書き)
+
+この実行のみ要約の詳細度を変更します。設定ファイルは変更しません。
+
+```bash
+zotomatic scan --once --summary-mode deep
+```
+
 ## 6. LLM 要約/タグ生成 (任意)
 
-`llm_openai_api_key` を設定すると、要約やタグを自動でノートに挿入できます。未設定の場合はノート生成のみ行われ、要約/タグは無効になります。
+`llm.provider` と API キーを設定すると、要約やタグを自動でノートに挿入できます。未設定の場合はノート生成のみ行われ、要約/タグは無効になります。
