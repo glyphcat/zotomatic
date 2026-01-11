@@ -1,6 +1,6 @@
 [project]
 name = "zotomatic"
-version = "0.1.1"
+version = "0.2.0"
 description = "A CLI tool for generating Markdown notes from academic PDF papers using customizable templates, Zotero metadata, and LLM-powered summaries."
 readme = "README.md"
 license = { file = "LICENSE" }

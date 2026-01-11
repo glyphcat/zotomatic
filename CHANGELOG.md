@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+
+## 0.2.0
 - Added Gemini support as an LLM provider alongside ChatGPT.
 - Introduced a new LLM configuration schema (`[llm]` and `[llm.providers.*]`).
 - Added `llm set` and `config migrate` commands for LLM and config updates.
