@@ -9,3 +9,4 @@
 - Added `llm set` and `config migrate` commands for LLM and config updates.
 - Updated default LLM models and output token limits for better summaries.
 - Added `chatgpt` as an alias for the `openai` LLM provider.
+- Added `scan --summary-mode` to override summary detail per run without changing config.
