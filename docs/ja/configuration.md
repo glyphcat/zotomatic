@@ -145,6 +145,8 @@ export ZOTOMATIC_LLM_OPENAI_API_KEY=...
 - `standard`: アブストラクトと各セクションの抜粋を使った要約。
 - `deep`: 本文を分割して要約し、最後に統合する詳細要約。
 
+実行ごとに一時上書きする場合は `zotomatic scan --summary-mode <mode>` を使います（設定ファイルは変更されません）。
+
 ## `note_title_pattern` (ノート名テンプレート) について
 
 `note_title_pattern` は `{{ key }}` 形式のプレースホルダーを使ってファイル名を組み立てます。値が空の場合は空文字になります。拡張子が指定されていない場合は `.md` が付与され、ファイル名は安全な文字に置き換えられます。

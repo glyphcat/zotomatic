@@ -98,6 +98,14 @@ zotomatic scan --path ~/Downloads/a.pdf ~/Downloads/b.pdf
 zotomatic scan --once --force
 ```
 
+### `--summary-mode <mode>` (一時上書き)
+
+この実行のみ要約の詳細度を変更します。設定ファイルは変更しません。
+
+```bash
+zotomatic scan --once --summary-mode deep
+```
+
 ## 6. LLM 要約/タグ生成 (任意)
 
 `llm.provider` と API キーを設定すると、要約やタグを自動でノートに挿入できます。未設定の場合はノート生成のみ行われ、要約/タグは無効になります。

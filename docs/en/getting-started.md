@@ -96,6 +96,14 @@ With `--once` / `--watch`, include PDFs that were skipped in previous runs. Exis
 zotomatic scan --once --force
 ```
 
+### `--summary-mode <mode>` (one-time override)
+
+Override the summary detail level for this run only. This does not change your config file.
+
+```bash
+zotomatic scan --once --summary-mode deep
+```
+
 ## 6. LLM summaries and tags (optional)
 
 When `llm.provider` and an API key are set, Zotomatic can auto-insert summaries and tags into notes. If unset, notes are generated without LLM output.
