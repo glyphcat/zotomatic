@@ -1,8 +1,5 @@
 # Changelog
 
-## 0.1.0
-- Initial release.
-
 ## Unreleased
 - Added Gemini support as an LLM provider alongside ChatGPT.
 - Introduced a new LLM configuration schema (`[llm]` and `[llm.providers.*]`).
@@ -10,3 +7,10 @@
 - Updated default LLM models and output token limits for better summaries.
 - Added `chatgpt` as an alias for the `openai` LLM provider.
 - Added `scan --summary-mode` to override summary detail per run without changing config.
+
+## 0.1.1
+- Improve Quick Start
+- Fix documentation links
+
+## 0.1.0
+- Initial release.
