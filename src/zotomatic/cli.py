@@ -7,7 +7,7 @@ import sys
 from collections.abc import Sequence
 from typing import Any
 
-from zotomatic import pipelines
+from zotomatic import __version__, pipelines
 from zotomatic.errors import ZotomaticCLIError, ZotomaticError
 
 from . import api
@@ -20,6 +20,13 @@ def _build_parser() -> argparse.ArgumentParser:
         prog="zotomatic",
         description="Zotomatic command-line interface",
         add_help=False,
+    )
+    parser.add_argument(
+        "--version",
+        "-V",
+        action="version",
+        version=__version__,
+        help="Show version and exit",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -150,6 +157,7 @@ def _print_help() -> None:
     print("")
     print("Options:")
     print("  -h, --help            Show this help message and exit")
+    print("  -V, --version         Show version and exit")
     print("")
     print("Command options:")
     print("  scan:")

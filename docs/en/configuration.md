@@ -14,6 +14,10 @@ This document lists the settings that users can specify via the config file or e
 3. Config file
 4. Package defaults
 
+## Version
+
+Check the installed version with `zotomatic --version`.
+
 ## Settings list
 
 ### Core settings

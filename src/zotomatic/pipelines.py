@@ -671,52 +671,102 @@ def run_config_show(cli_options: Mapping[str, Any] | None = None):
     keys = config.user_config_keys()
     visible_items = {k: settings.get(k, (None, "unset")) for k in keys}
     llm_entry = settings.get("llm")
+    llm_value: Mapping[str, Any] | None = None
+    llm_source = "unset"
     if llm_entry:
         llm_value, llm_source = llm_entry
-        if isinstance(llm_value, Mapping):
-            provider = llm_value.get("provider")
-            if provider is not None:
-                visible_items["llm.provider"] = (provider, llm_source)
-            providers = llm_value.get("providers")
-            if provider and isinstance(providers, Mapping):
-                provider_settings = providers.get(str(provider))
-                if isinstance(provider_settings, Mapping):
-                    for item_key in ("api_key", "model", "base_url"):
-                        if item_key in provider_settings:
-                            visible_items[
-                                f"llm.providers.{provider}.{item_key}"
-                            ] = (provider_settings.get(item_key), llm_source)
+    provider = None
+    providers: Mapping[str, Any] = {}
+    if isinstance(llm_value, Mapping):
+        provider = llm_value.get("provider")
+        providers = llm_value.get("providers") or {}
+        if not isinstance(providers, Mapping):
+            providers = {}
+    active_provider = str(provider) if provider else ""
     if not visible_items:
         print("No configurable settings available.")
         return 0
-    width = max(len(key) for key in visible_items)
-    rendered: dict[str, str] = {}
-    for key, (value, _source) in visible_items.items():
-        if key.startswith("llm.providers.") and key.endswith(".api_key") and value:
+
+    def _render_setting_value(key: str, value: Any) -> str:
+        if key.endswith(".api_key") and value:
             raw = str(value)
             if len(raw) <= 8:
                 masked = "***"
             else:
                 masked = f"{raw[:4]}...{raw[-4:]}"
-            rendered[key] = f'"{masked}"'
-        else:
-            rendered[key] = "" if value is None else config.render_value(value)
-    value_width = max(len(value) for value in rendered.values())
-    print("Effective configuration:")
-    for key in sorted(visible_items):
-        padded = key.ljust(width)
-        value, source = visible_items[key]
+            return f'"{masked}"'
+        return "" if value is None else config.render_value(value)
+
+    def _format_suffix(source: str) -> str:
+        suffix_parts = []
         if source == "default":
-            suffix = "default"
+            suffix_parts.append("default")
         elif source == "unset":
-            suffix = "unset"
-        else:
-            suffix = ""
-        value_str = rendered[key].ljust(value_width)
-        if suffix:
-            print(f"  {padded} = {value_str}  ({suffix})")
-        else:
-            print(f"  {padded} = {value_str}")
+            suffix_parts.append("unset")
+        return ", ".join(suffix_parts)
+
+    print("Effective configuration:")
+    core_keys = sorted(visible_items)
+    if core_keys:
+        print("[Core settings]")
+        key_width = max(len(key) for key in core_keys)
+        rendered = {
+            key: _render_setting_value(key, visible_items[key][0]) for key in core_keys
+        }
+        value_width = max(len(value) for value in rendered.values())
+        for key in core_keys:
+            value, source = visible_items[key]
+            padded = key.ljust(key_width)
+            value_str = rendered[key].ljust(value_width)
+            suffix = _format_suffix(source)
+            if suffix:
+                print(f"  {padded} = {value_str}  ({suffix})")
+            else:
+                print(f"  {padded} = {value_str}")
+
+    print("")
+    print("[LLM settings]")
+    provider_value = provider if provider is not None else None
+    provider_source = llm_source if provider is not None else "unset"
+    provider_suffix = _format_suffix(provider_source)
+    provider_value_str = _render_setting_value("llm.provider", provider_value)
+    if provider_suffix:
+        print(f"  provider = {provider_value_str}  ({provider_suffix})")
+    else:
+        print(f"  provider = {provider_value_str}")
+
+    for provider_name in LLM_PROVIDER_DEFAULTS:
+        print(f"  providers.{provider_name}:")
+        provider_settings = providers.get(str(provider_name), {})
+        if not isinstance(provider_settings, Mapping):
+            provider_settings = {}
+        for item_key in ("api_key", "model", "base_url"):
+            value = provider_settings.get(item_key)
+            source = llm_source if item_key in provider_settings else "unset"
+            if (
+                value is None
+                and provider_name == active_provider
+                and item_key in ("model", "base_url")
+            ):
+                default_value = LLM_PROVIDER_DEFAULTS.get(provider_name, {}).get(
+                    item_key
+                )
+                if default_value is not None:
+                    value = default_value
+                    source = "default"
+            rendered_value = _render_setting_value(
+                f"llm.providers.{provider_name}.{item_key}", value
+            )
+            suffix = _format_suffix(source)
+            if suffix:
+                print(f"    {item_key} = {rendered_value}  ({suffix})")
+            else:
+                print(f"    {item_key} = {rendered_value}")
+    print("")
+    print(
+        "  * If you want to change the provider, use "
+        "`zotomatic llm set --provider <name>`"
+    )
     return 0
 
 
