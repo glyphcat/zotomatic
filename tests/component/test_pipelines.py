@@ -457,10 +457,11 @@ def test_run_config_show_masks_llm_api_key(
     result = pipelines.run_config_show({})
     assert result == 0
     captured = capsys.readouterr()
-    assert "llm.provider" in captured.out
-    assert "llm.providers.openai.api_key" in captured.out
+    assert "provider = \"openai\"" in captured.out
+    assert "providers.openai:" in captured.out
     assert "secret-key" not in captured.out
-    assert "llm.providers.openai.model" in captured.out
+    assert "api_key = \"secr...-key\"" in captured.out
+    assert "model = \"gpt-4o-mini\"" in captured.out
 
 
 def test_run_config_default(
